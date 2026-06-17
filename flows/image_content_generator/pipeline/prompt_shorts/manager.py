@@ -6,10 +6,10 @@ from flows.image_content_generator.pipeline.prompt_base.models import (
     CategoryHandler,
     VideoScript,
 )
-from flows.image_content_generator.pipeline.prompt_shorts.finances import (
-    constants as finances_constants,
+from flows.image_content_generator.pipeline.prompt_shorts.spirituality import (
+    constants as spirituality_constants,
 )
-from flows.image_content_generator.pipeline.prompt_shorts.finances.models import FinancesHandler
+from flows.image_content_generator.pipeline.prompt_shorts.spirituality.models import SpiritualityHandler
 from tools.common.messenger import Messenger
 from tools.text_generation.gemini import GeminiTextGenerator
 
@@ -17,11 +17,13 @@ from tools.text_generation.gemini import GeminiTextGenerator
 class PromptManagerShorts(BasePromptManager):
     """Manager specific to Short videos (9:16), aggregating modular categories."""
 
-    # Finance voice & audio style
-    AUDIO_PROMPT: str = finances_constants.AUDIO_PROMPT
+    # Spirituality voice & audio style
+    AUDIO_PROMPT: str = spirituality_constants.AUDIO_PROMPT
+
+    VOICE_NAME: str = "enceladus"
 
     CATEGORIES: Sequence[Type[CategoryHandler]] = [
-        FinancesHandler,
+        SpiritualityHandler,
     ]
 
     def generate_full_story(

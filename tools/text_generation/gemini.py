@@ -8,7 +8,7 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class GeminiTextGenerator(GeminiBase):
-    text_model: str = "gemini-3.1-flash-lite-preview"
+    text_model: str = "gemini-2.5-flash"
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)

@@ -229,6 +229,7 @@ class Pipeline(BaseModelTool):
         self.store.save(idea_obj)
         Messenger.success(f"Step 1 ready: {State.SCRIPT_GENERATED} finalized.\n")
 
+    @retry(max_attempts=3)
     def step2_generate_images(self):
         """
         Generate Images: Produces photorealistic visuals for each scene.

@@ -93,7 +93,7 @@ This framework uses a **Pydantic-Driven, Niche-Pluggable Prompt Architecture**:
 
 - **Logic-Inside-Models**: Pydantic models (`BaseIdea`, `VideoScript`, `CategoryHandler`) generate their own structured prompt instructions.
 - **Dynamic JSON Scaling**: Mandatory output schemas are auto-injected based on field descriptions — no manual formatting needed.
-- **Niche-Isolated Categories**: Each content niche (e.g., `finances`) lives in its own isolated module with `models.py`, `constants.py`, and `__init__.py`, cleanly registered into the manager without touching core logic.
+- **Niche-Isolated Categories**: Each content niche (e.g., `spirituality`) lives in its own isolated module with `models.py`, `constants.py`, and `__init__.py`, cleanly registered into the manager without touching core logic.
 - **Multi-format Managers**: `PromptManagerShorts` targets 9:16 Shorts; `PromptManagerLongs` targets 16:9 Longs with chunked script generation (6 chunks × 20 scenes).
 
 ---
@@ -110,7 +110,7 @@ video-automation/
 │       │   ├── storage_csv.py        # CSV-based idea tracking
 │       │   ├── prompt_base/          # Shared base models & manager
 │       │   ├── prompt_shorts/        # Niche handlers for Shorts (9:16)
-│       │   │   └── finances/         # Finance niche (Mindset & Strategy variants)
+│       │   │   └── spirituality/     # Spirituality niche (Daily Prayer & Reflection variants)
 │       │   └── prompt_longs/         # Niche handlers for Longs (16:9)
 │       │       └── finances/         # Finance niche (long-form variant)
 │       └── resource/                 # Style references & background music
@@ -130,11 +130,11 @@ video-automation/
 
 Content niches are self-contained modules registered in the prompt managers. The public version ships with a **Finance** niche for both Shorts and Longs:
 
-### Shorts — `prompt_shorts/finances/`
+### Shorts — `prompt_shorts/spirituality/`
 | Variant | Idea Model | Focus |
 |---------|-----------|-------|
-| Mindset | `MindsetFinanceIdea` | Financial mindset transformation |
-| Strategy | `StrategyFinanceIdea` | Practical financial strategy tips |
+| Daily Prayer | `DailyPrayerIdea` | Daily prayers, faith, and healing frequency (432Hz/528Hz) |
+| Spiritual Reflection | `SpiritualReflectionIdea` | Calm, inner peace, and spiritual reflection |
 
 ### Longs — `prompt_longs/finances/`
 | Variant | Description |
