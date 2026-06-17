@@ -16,7 +16,7 @@ IDEA_PROMPT_PRAYER: str = """# 🧠 PROMPT MAESTRO — AGENTE DE IDEAS DE ESPIRI
 **Objetivo:** Generar una idea creativa para un video CORTO de oración diaria, sanación y fe, enfocado en el descanso del alma y la conexión espiritual.
 
 **Instrucciones:**
-1. **hook (Gancho de Interrupción):** Una frase de 10-15 palabras en INGLÉS que conecte directamente con una lucha emocional, fatiga mental o necesidad espiritual profunda del espectador (ej. "If Monday morning feels like a weight... this prayer is for you.", "If you woke up with anxiety in your chest, listen to this."). Debe ser sumamente empático y directo.
+1. **hook (Gancho de Interrupción):** Una frase de 10-15 palabras en ESPAÑOL LATINOAMERICANO que conecte directamente con una lucha emocional, fatiga mental o necesidad espiritual profunda del espectador (ej. "Si el lunes por la mañana se siente como un peso... esta oración es para ti.", "Si despertaste con ansiedad en el pecho, escucha esto."). Debe ser sumamente empático y directo. NUNCA escribas el hook en inglés: se usa de forma literal como narración hablada de la Escena 1, por lo que debe estar en español.
 2. **day_of_week:** El día de la semana para el que está pensada la oración (ej. "Lunes", "Miércoles", "Domingo", "Diario").
 3. **spiritual_theme:** El tema o enfoque espiritual de la oración (ej. "Fuerza para empezar la semana", "Paz en la tormenta", "Vencer la ansiedad", "Gratitud al despertar").
 4. **bible_verse:** Un versículo bíblico reconfortante en español que sirva de cimiento espiritual para el mensaje (ej. "Filipenses 4:13", "Salmo 23:1", "Mateo 11:28").
@@ -29,7 +29,7 @@ IDEA_PROMPT_REFLECTION: str = """# 🧠 PROMPT MAESTRO — AGENTE DE IDEAS DE ES
 **Objetivo:** Generar una idea para un video CORTO que comparta una reflexión espiritual reconfortante, calma interior y esperanza.
 
 **Instrucciones:**
-1. **hook (Gancho de Interrupción):** Una frase provocadora de 10-15 palabras en INGLÉS que despierte la curiosidad sobre un aspecto espiritual o de fe (ej. "Stop trying to carry everything by yourself. God is in control.", "Your current struggle is not the end of your story.").
+1. **hook (Gancho de Interrupción):** Una frase provocadora de 10-15 palabras en ESPAÑOL LATINOAMERICANO que despierte la curiosidad sobre un aspecto espiritual o de fe (ej. "Deja de intentar cargar con todo tú solo. Dios tiene el control.", "Tu lucha de hoy no es el final de tu historia."). NUNCA escribas el hook en inglés: se usa de forma literal como narración hablada de la Escena 1, por lo que debe estar en español.
 2. **spiritual_theme:** El tema espiritual central (ej. "Confianza en los tiempos de Dios", "Soltar el control", "El valor del silencio").
 3. **bible_verse:** Un versículo bíblico reconfortante en español que inspire la reflexión (ej. "Isaías 40:31", "Mateo 6:34", "Josué 1:9").
 4. **key_reflection:** El mensaje espiritual o revelación central que se explicará en el video.
@@ -79,4 +79,5 @@ SCRIPT_PROMPT: str = """# 📝 PROMPT MAESTRO — AGENTE GUIONISTA DE ESPIRITUAL
 ### 🟠 IDIOMAS (ESTRICTO)
 - **image_prompt:** DEBES generar todos los subcampos de `image_prompt` (subjects, environment, lighting, composition) en **INGLÉS** (para la IA de imágenes).
 - **narration:** DEBES generar el campo `narration` en **ESPAÑOL LATINOAMERICANO** (para la voz en off).
+- **hook:** El campo `hook` se reutiliza de forma literal como narración hablada de la Escena 1, así que DEBE estar en **ESPAÑOL LATINOAMERICANO**. NUNCA generes el hook en inglés.
 """
