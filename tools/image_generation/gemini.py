@@ -66,20 +66,51 @@ class GeminiImageGenerator(GeminiBase):
         msg = f"Imagen generada ({'img2img' if is_ref else 'txt2img'}): {output_path}"
         Messenger.image(msg)
 
-    def generate_images(self, tasks: List[ImageTask]) -> None:
+    def generate_images(self, tasks: List[ImageTask], max_attempts: int = 3) -> None:
         """
         Generates images in batch for a list of ImageTask objects.
         Processes sequentially (Gemini API is synchronous).
+
+        Each scene is retried up to ``max_attempts`` times. A scene that still
+        fails is recorded and skipped so the rest of the batch keeps running;
+        if any scene ultimately failed, an aggregated error is raised at the end
+        so the idea is not marked complete with a missing image. Already-failed
+        scenes are simply absent from disk, so a later run regenerates only them.
         """
         total = len(tasks)
         Messenger.info(f"Batch Processing: {total} images via Gemini")
 
+        failures: List[tuple[str, str]] = []
         for i, task in enumerate(tasks, start=1):
             Messenger.info(f"Generating image {i}/{total}: {task.output_path.name}")
-            self.generate_image(
-                prompt=task.prompt,
-                output_path=task.output_path,
-                style_references=self.style_references,
+            last_error: Optional[Exception] = None
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    self.generate_image(
+                        prompt=task.prompt,
+                        output_path=task.output_path,
+                        style_references=self.style_references,
+                    )
+                    last_error = None
+                    break
+                except Exception as e:  # noqa: BLE001 - keep the batch going
+                    last_error = e
+                    Messenger.warning(
+                        f"Attempt {attempt}/{max_attempts} failed for "
+                        f"{task.output_path.name}: {e}"
+                    )
+
+            if last_error is not None:
+                Messenger.error(
+                    f"Skipping {task.output_path.name} after {max_attempts} attempts."
+                )
+                failures.append((task.output_path.name, str(last_error)))
+
+        if failures:
+            names = ", ".join(name for name, _ in failures)
+            raise RuntimeError(
+                f"❌ {len(failures)}/{total} images failed after retries: {names}. "
+                f"Last error: {failures[-1][1]}"
             )
 
         Messenger.step_success(f"Batch complete: {total} images generated.")
