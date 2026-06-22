@@ -20,3 +20,6 @@ models
 
 # future versions
 **/video_content_generator
+
+# Custom files
+ARCHITECTURE.md

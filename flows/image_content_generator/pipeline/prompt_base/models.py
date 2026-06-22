@@ -27,7 +27,7 @@ class BaseIdea(BaseModel):
         schema_lines: list[str] = []
         for name, field in fields.items():
             # Use docstring/description if available, or fallback to the field name
-            desc: str = str(field.description) if field.description else name
+            desc: str = field.description if field.description else name
             schema_lines.append(f'  "{name}": "{desc}"')
 
         json_format = ",\n".join(schema_lines)
@@ -86,9 +86,17 @@ class ImagePrompt(BaseModel):
         return ". ".join(prompt_parts) + "."
 
 
+class VideoPrompt(BaseModel):
+    motion: str = Field(description="Movement of subjects in the scene in ENGLISH (e.g. 'Character walks forward, coins falling around him')")  # noqa: E501
+    camera_movement: str = Field(description="Camera action in ENGLISH (e.g. 'Slow zoom in', 'Pan left to right', 'Static wide shot', 'Tracking shot')")  # noqa: E501
+    transition: str = Field(description="How this scene transitions to the next in ENGLISH (e.g. 'Hard cut', 'Fade to black', 'Dissolve', 'Whip pan')")  # noqa: E501
+    duration_hint: str = Field(description="Duration pacing and rhythm of the scene in ENGLISH (e.g. 'Fast paced', 'Slow and cinematic', '3 seconds')")  # noqa: E501
+
+
 class Scene(BaseModel):
     scene_number: int = Field(description="Sequential number of the scene (Integer)")
     image_prompt: ImagePrompt = Field(description="Structured details for image generation")
+    video_prompt: VideoPrompt = Field(description="Structured details for video generation")
     narration: str = Field(description="Spoken narration for this scene in SPANISH (LATAM)")
 
 
@@ -119,13 +127,13 @@ class VideoScript(BaseModel):
                         if issubclass(item_type, BaseModel):
                             format_dict[name] = [get_format_recursive(item_type)]
                         else:
-                            format_dict[name] = [str(field.description or item_type.__name__)]
+                            format_dict[name] = [field.description or item_type.__name__]
                     else:
-                        format_dict[name] = [str(field.description or str(item_type))]
+                        format_dict[name] = [field.description or str(item_type)]
                 elif isinstance(annotation, type) and issubclass(annotation, BaseModel):
                     format_dict[name] = get_format_recursive(annotation)
                 else:
-                    format_dict[name] = str(field.description or name)
+                    format_dict[name] = field.description or name
             return format_dict
 
         # Generate sample structure

@@ -63,6 +63,7 @@ class Pipeline(BaseModelTool):
     SCENE_IMAGE_PATTERN: ClassVar[str] = "scene_{}.png"
     SCENE_AUDIO_PATTERN: ClassVar[str] = "scene_{}.wav"
     SCENE_VIDEO_PATTERN: ClassVar[str] = "scene_{}.mp4"
+    SCENE_VIDEO_SYNCED_PATTERN: ClassVar[str] = "scene_{}_synced.mp4"
     BATCH_AUDIO_PATTERN: ClassVar[str] = "batch_{}.wav"
 
     # Standard Resource Directories
@@ -276,9 +277,9 @@ class Pipeline(BaseModelTool):
         Generate Audio: Batched AI-Guided Batching (Whisper + Gemini).
         Processes scenes in groups of 10 for maximum stability and alignment precision.
         """
-        idea_obj = self.store.get_first_by_state(State.IMAGES_GENERATED)
+        idea_obj = self.store.get_first_by_state(State.VIDEOS_GENERATED)
         if not idea_obj:
-            Messenger.error("No images ready for audio generation.")
+            Messenger.error("No AI videos ready for audio generation.")
             return
 
         Messenger.info("\n--- Generating batched audio for the script ---")
@@ -380,44 +381,45 @@ class Pipeline(BaseModelTool):
 
     def step4_generate_videos(self):
         """
-        Generate Videos: Batch Video Generation (FFmpeg).
+        Sync & Assemble Videos: Adapts each AI-generated scene video speed to match
+        its corresponding audio duration, then concatenates into raw_video.mp4.
         1. Retrieves the AUDIO_GENERATED idea.
-        2. Loads script.json for scene data.
-        3. Merges assets into scene clips.
-        4. Final video concatenation.
+        2. Loads script.json for scene count.
+        3. Syncs each scene video speed to its audio duration.
+        4. Concatenates synced scene videos into raw_video.mp4.
         5. Updates state.
         """
         # 1. Retrieves AUDIO_GENERATED idea.
         idea_obj = self.store.get_first_by_state(State.AUDIO_GENERATED)
         if not idea_obj:
-            Messenger.error("No audio ready for video generation.")
+            Messenger.error("No audio ready for video sync.")
             return
 
-        Messenger.info("\n--- Generating videos for the script ---")
+        Messenger.info("\n--- Syncing AI scene videos to audio duration ---")
 
-        # 2. Loads script.json for scene data.
+        # 2. Loads script.json for scene count.
         script_data = self.load_json(idea_obj.id, self.SCRIPT_JSON, VideoScript)
 
-        # 3. Merges assets into scene clips.
-        scene_videos: List[Path] = []
+        # 3. Syncs each scene video speed to its audio duration.
+        synced_videos: List[Path] = []
         for i in range(len(script_data.scenes)):
-            image_path = self.get_idea_asset_path(
-                idea_obj.id, self.IMAGES_DIR, self.SCENE_IMAGE_PATTERN.format(i + 1)
+            video_path = self.get_idea_asset_path(
+                idea_obj.id, self.VIDEOS_DIR, self.SCENE_VIDEO_PATTERN.format(i + 1)
             )
             audio_path = self.get_idea_asset_path(
                 idea_obj.id, self.AUDIOS_DIR, self.SCENE_AUDIO_PATTERN.format(i + 1)
             )
-            video_path = self.get_idea_asset_path(
-                idea_obj.id, self.VIDEOS_DIR, self.SCENE_VIDEO_PATTERN.format(i + 1)
+            synced_path = self.get_idea_asset_path(
+                idea_obj.id, self.VIDEOS_DIR, self.SCENE_VIDEO_SYNCED_PATTERN.format(i + 1)
             )
 
-            Messenger.info(f"Stitching Scene {i+1} with 3-part dynamic effect...")
-            self.ffmpeg.create_composite_scene_video(image_path, audio_path, video_path)
-            scene_videos.append(video_path)
+            Messenger.info(f"Syncing Scene {i+1} video speed to audio duration...")
+            self.ffmpeg.sync_video_and_audio(video_path, audio_path, synced_path)
+            synced_videos.append(synced_path)
 
-        # 4. Final video concatenation.
+        # 4. Concatenates synced scene videos into raw_video.mp4.
         raw_video = self.get_idea_asset_path(idea_obj.id, self.EDITIONS_DIR, self.RAW_VIDEO)
-        self.ffmpeg.concat_videos(scene_videos, raw_video)
+        self.ffmpeg.concat_videos(synced_videos, raw_video)
 
         # 5. Updates state.
         idea_obj.state = State.VIDEO_GENERATED

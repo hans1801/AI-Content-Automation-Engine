@@ -59,5 +59,6 @@ SCRIPT_PROMPT: str = """# 📝 PROMPT MAESTRO — AGENTE GUIONISTA FINANCIERO (S
 
 ### 🟠 IDIOMAS (ESTRICTO)
 - **image_prompt:** DEBES generar todos los campos de `image_prompt` (subjects, environment, lighting, composition) en **INGLÉS**.
+- **video_prompt:** DEBES generar todos los campos de `video_prompt` (motion, camera_movement, transition, duration_hint) en **INGLÉS**. Describe el movimiento de los sujetos, la acción de cámara, la transición a la siguiente escena y el ritmo de duración.
 - **narration:** DEBES generar el campo `narration` en **ESPAÑOL LATINOAMERICANO**.
 """
