@@ -28,9 +28,8 @@ const STEPS: PipelineStep[] = [
   { num: '02', title: 'Imágenes' },
   { num: '03', title: 'Videos' },
   { num: '04', title: 'Audio' },
-  { num: '05', title: 'Sincronización' },
-  { num: '06', title: 'Subtítulos' },
-  { num: '07', title: 'Final' },
+  { num: '05', title: 'Ensamblado' },
+  { num: '06', title: 'Producción Final' },
 ]
 
 interface Props { idea: Idea; onUpdate: () => void }
@@ -48,18 +47,17 @@ export default function StepWizard({ idea, onUpdate }: Props) {
   const subsStep   = useJobStep()
   const assemble   = useJobStep()
 
-  const [selected, setSelected]         = useState(0)
-  const [showForm, setShowForm]         = useState(false)
-  const [scriptMode, setScriptMode]     = useState<'generate' | 'upload'>('generate')
-  const [uploadingScript, setUploadScript] = useState(false)
-  const [reuploadImages, setReupImages] = useState(false)
-  const [reuploadVideos, setReupVideos] = useState(false)
+  const [selected, setSelected]             = useState(0)
+  const [showForm, setShowForm]             = useState(false)
+  const [scriptMode, setScriptMode]         = useState<'generate' | 'upload'>('generate')
+  const [uploadingScript, setUploadScript]  = useState(false)
+  const [reuploadImages, setReupImages]     = useState(false)
+  const [reuploadVideos, setReupVideos]     = useState(false)
 
   const level = LEVEL[idea.state] ?? 0
 
-  // Auto-select active step when idea loads
   useEffect(() => {
-    const active = Math.min(level, 6)
+    const active = Math.min(level, 5)
     setSelected(active)
     setShowForm(false)
     setScriptMode('generate')
@@ -68,11 +66,10 @@ export default function StepWizard({ idea, onUpdate }: Props) {
     ;[scriptStep, audioStep, syncStep, subsStep, assemble].forEach(s => s.reset())
   }, [idea.id])
 
-  // Advance selected step when a job completes
   useEffect(() => {
     const pairs = [
       [scriptStep, 1], [audioStep, 4], [syncStep, 5],
-      [subsStep, 6], [assemble, 6],
+      [subsStep, 5], [assemble, 5],
     ] as const
     for (const [step, next] of pairs) {
       if (step.done && !step.handled.current) {
@@ -118,26 +115,30 @@ export default function StepWizard({ idea, onUpdate }: Props) {
   async function handleSubs()     { subsStep.start(await postJob(`${base}/subtitles`)) }
   async function handleAssemble() { assemble.start(await postJob(`${base}/assemble`)) }
 
-  // ── Status helpers ──────────────────────────────────────────────────────────
   function getStatus(i: number): 'done' | 'active' | 'running' | 'locked' {
-    const running = [scriptStep, null, null, audioStep, syncStep, subsStep, assemble]
-    if (running[i]?.jobId) return 'running'
-    const done = i < 6 ? level >= i + 1 : level === 8
+    // Running check per step
+    const isRunning =
+      (i === 0 && !!scriptStep.jobId) ||
+      (i === 3 && !!audioStep.jobId)  ||
+      (i === 4 && !!syncStep.jobId)   ||
+      (i === 5 && !!(subsStep.jobId || assemble.jobId))
+    if (isRunning) return 'running'
+
+    const done = i < 5 ? level >= i + 1 : level === 8
     if (done) return 'done'
-    const active = i < 6 ? level === i : level >= 6 && level < 8
+    const active = i < 5 ? level === i : level >= 5 && level < 8
     if (active) return 'active'
     return 'locked'
   }
 
   const stepDone = (i: number) => getStatus(i) === 'done'
 
-  // ── Step content renderer ───────────────────────────────────────────────────
   function renderContent() {
     switch (selected) {
       // 01 Script
       case 0: return (
         <>
-          {(level === 0 || showForm) && !scriptStep.jobId ? (
+          {(level === 0 || showForm) && !scriptStep.jobId && (
             <>
               <ModeTabs>
                 <ModeTab $active={scriptMode === 'generate'} onClick={() => setScriptMode('generate')}>✦ Generar</ModeTab>
@@ -154,17 +155,13 @@ export default function StepWizard({ idea, onUpdate }: Props) {
                 )
               }
             </>
-          ) : null}
+          )}
           {scriptStep.jobId && <Terminal logs={scriptStep.logs} running />}
           {level >= 1 && !showForm && !scriptStep.jobId && (
             <>
               <ActionRow>
-                <BtnSecondary onClick={() => window.open(`${base}/script`, '_blank')}>
-                  Descargar script.json
-                </BtnSecondary>
-                <BtnSecondary onClick={() => setShowForm(true)}>
-                  ↺ Regenerar
-                </BtnSecondary>
+                <BtnSecondary onClick={() => window.open(`${base}/script`, '_blank')}>Descargar script.json</BtnSecondary>
+                <BtnSecondary onClick={() => setShowForm(true)}>↺ Regenerar</BtnSecondary>
               </ActionRow>
               <ScriptViewer url={`${base}/script`} />
             </>
@@ -236,17 +233,17 @@ export default function StepWizard({ idea, onUpdate }: Props) {
         </>
       )
 
-      // 05 Sincronización
+      // 05 Ensamblado
       case 4: return (
         <>
           {level === 4 && !syncStep.jobId && (
-            <ActionRow><BtnPrimary onClick={handleSync}>Sincronizar Video</BtnPrimary></ActionRow>
+            <ActionRow><BtnPrimary onClick={handleSync}>Ensamblar Video</BtnPrimary></ActionRow>
           )}
           {syncStep.jobId && <Terminal logs={syncStep.logs} running />}
           {level >= 5 && !syncStep.jobId && (
             <>
               <ActionRow>
-                <BtnSecondary onClick={handleSync}>↺ Re-sincronizar</BtnSecondary>
+                <BtnSecondary onClick={handleSync}>↺ Re-ensamblar</BtnSecondary>
               </ActionRow>
               <VideoSequence baseUrl={base} synced sectionLabel="Escenas sincronizadas" />
               <VideoPlayer src={`${base}/editions/raw_video.mp4`} label="Video ensamblado (sin subtítulos)" />
@@ -255,39 +252,33 @@ export default function StepWizard({ idea, onUpdate }: Props) {
         </>
       )
 
-      // 06 Subtítulos
+      // 06 Producción Final (subtítulos + música + rename)
       case 5: return (
         <>
+          {/* Sub-step A: Subtítulos */}
           {level === 5 && !subsStep.jobId && (
             <ActionRow><BtnPrimary onClick={handleSubs}>Generar Subtítulos</BtnPrimary></ActionRow>
           )}
           {subsStep.jobId && <Terminal logs={subsStep.logs} running />}
-          {level >= 6 && !subsStep.jobId && (
+
+          {/* Sub-step B: Música + Renombre (solo visible antes de completar) */}
+          {level >= 6 && level < 8 && !assemble.jobId && (
             <>
-              <ActionRow>
+              <VideoPlayer src={`${base}/editions/subtitled_video.mp4`} label="Video con subtítulos" />
+              <ActionRow style={{ marginTop: 16 }}>
+                <BtnPrimary onClick={handleAssemble}>Agregar Música y Finalizar</BtnPrimary>
                 <BtnSecondary onClick={handleSubs}>↺ Regenerar Subtítulos</BtnSecondary>
               </ActionRow>
-              <VideoPlayer src={`${base}/editions/subtitled_video.mp4`} label="Video con subtítulos" />
             </>
           )}
-        </>
-      )
-
-      // 07 Final
-      case 6: return (
-        <>
-          {level >= 6 && level < 8 && !assemble.jobId && (
-            <ActionRow><BtnPrimary onClick={handleAssemble}>Ensamblar Video Final</BtnPrimary></ActionRow>
-          )}
           {assemble.jobId && <Terminal logs={assemble.logs} running />}
+
           {level === 8 && !assemble.jobId && (
             <>
               <ActionRow>
                 <DoneText $completed>🎬 Video completado</DoneText>
-                <BtnSecondary onClick={() => window.open(`${base}/video`, '_blank')}>
-                  Descargar video
-                </BtnSecondary>
-                <BtnSecondary onClick={handleAssemble}>↺ Re-ensamblar</BtnSecondary>
+                <BtnSecondary onClick={() => window.open(`${base}/video`, '_blank')}>Descargar video</BtnSecondary>
+                <BtnSecondary onClick={handleAssemble}>↺ Re-finalizar</BtnSecondary>
               </ActionRow>
               <VideoPlayer src={`${base}/video`} label="Video final" />
             </>
