@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Idea } from '../../tools/types'
+import { api } from '../../tools/api'
 import IdeaList from '../../components/IdeaList/IdeaList'
 import StepWizard from '../../components/StepWizard/StepWizard'
 import ApiKeyModal from '../../components/ApiKeyModal/ApiKeyModal'
@@ -17,8 +18,7 @@ export default function MainView() {
 
   const fetchIdeas = useCallback(async () => {
     try {
-      const res = await fetch('/api/ideas')
-      const data = (await res.json()) as Idea[]
+      const data = await api.ideas.list()
       setIdeas(data)
     } catch { /* server not ready */ }
   }, [])
@@ -30,8 +30,7 @@ export default function MainView() {
 
   const checkKey = useCallback(async () => {
     try {
-      const res = await fetch('/api/config/gemini-key')
-      const d = await res.json()
+      const d = await api.geminiKey.check()
       setKeyConfigured(d.configured)
     } catch { setKeyConfigured(false) }
   }, [])

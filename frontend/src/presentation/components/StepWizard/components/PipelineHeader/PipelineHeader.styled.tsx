@@ -1,4 +1,4 @@
-import styled, { keyframes, css } from 'styled-components'
+import styled, { keyframes, css, DefaultTheme } from 'styled-components'
 
 export const Header = styled.div`
   display: flex;
@@ -34,7 +34,7 @@ const runningRing = css`
     inset: -4px;
     border-radius: 50%;
     border: 2px solid transparent;
-    border-top-color: ${({ theme }: any) => theme.colors.accent};
+    border-top-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.accent};
     animation: ${spin} 0.8s linear infinite;
   }
 `

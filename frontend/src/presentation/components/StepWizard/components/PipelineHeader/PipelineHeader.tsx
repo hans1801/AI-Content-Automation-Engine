@@ -1,3 +1,4 @@
+import React from 'react'
 import { Header, StepItem, Connector, Circle, StepLabel } from './PipelineHeader.styled'
 
 export interface PipelineStep {
@@ -21,8 +22,8 @@ export default function PipelineHeader({ steps, selected, getStatus, onSelect }:
         const status = getStatus(i)
         const locked = status === 'locked'
         return (
-          <>
-            <StepItem key={step.num}>
+          <React.Fragment key={step.num}>
+            <StepItem>
               <Circle
                 $status={status}
                 $selected={i === selected}
@@ -37,9 +38,9 @@ export default function PipelineHeader({ steps, selected, getStatus, onSelect }:
               </StepLabel>
             </StepItem>
             {i < steps.length - 1 && (
-              <Connector key={`conn-${i}`} $filled={status === 'done'} />
+              <Connector $filled={status === 'done'} />
             )}
-          </>
+          </React.Fragment>
         )
       })}
     </Header>

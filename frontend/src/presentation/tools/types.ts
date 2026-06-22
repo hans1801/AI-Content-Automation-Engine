@@ -14,10 +14,23 @@ export const DEFAULT_FORM: ScriptFormData = {
   aspect_ratio: '9:16',
 }
 
+export type IdeaState =
+  | 'NEW'
+  | 'SCRIPT_GENERATED'
+  | 'IMAGES_GENERATED'
+  | 'VIDEOS_GENERATED'
+  | 'AUDIO_GENERATED'
+  | 'VIDEO_GENERATED'
+  | 'VIDEO_SUBTITLED'
+  | 'VIDEO_MUSIC_GENERATED'
+  | 'COMPLETED'
+
+export type PipelineLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+
 export interface Idea {
   id: number
   title: string
   category: string
-  state: string
+  state: IdeaState
   form?: ScriptFormData
 }
