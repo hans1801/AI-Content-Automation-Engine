@@ -190,38 +190,24 @@ class Pipeline(BaseModelTool):
         title_slug = slugify(title)
         return self.get_idea_path(idea_id) / f"{title_slug}.mp4"
 
-    def step1_generate_story(self):
-        """
-        Generate Concept & Script: Creates a cinematic idea and expands it into a storyboard.
-        1. Generates concept and script using PromptManager.
-        2. Registers the new idea in folder store.
-        3. Saves idea.json and script.json.
-        4. Updates state to SCRIPT_GENERATED.
-        """
-        Messenger.info("\n--- Generating cinematic concept and script ---")
+    def step1_generate_story(self, idea_id: int):
+        idea_obj = self.store.get_by_id(idea_id)
+        if not idea_obj:
+            Messenger.error(f"Idea {idea_id} not found.")
+            return
 
-        # 1. Generates full story (Concept + Script)
-        idea_data, script, category = self.prompt_manager.generate_full_story(
-            self.text_gen
-        )
+        Messenger.info("\n--- Regenerating cinematic concept and script ---")
 
-        # 2. Registers the new idea.
-        idea_obj = self.store.add(
-            IdeaRaw(
-                id=self.store.get_next_id(),
-                title=idea_data.title, state=State.NEW,
-                category=category,
-            )
-        )
+        idea_data, script, category = self.prompt_manager.generate_full_story(self.text_gen)
 
-        # 3. Saves JSONs
+        idea_obj.title = idea_data.title
+        idea_obj.category = category
         self.save_json(idea_obj.id, self.IDEA_JSON, idea_data)
         self.save_json(idea_obj.id, self.SCRIPT_JSON, script)
 
-        # 4. Updates state
         idea_obj.state = State.SCRIPT_GENERATED
         self.store.save(idea_obj)
-        Messenger.success(f"Step 1 ready: {State.SCRIPT_GENERATED} finalized.\n")
+        Messenger.success(f"Script regenerated: {State.SCRIPT_GENERATED} finalized.\n")
 
     @retry(max_attempts=3)
     def step3_generate_audios(self, idea_id: int):

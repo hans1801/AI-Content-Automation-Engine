@@ -1,8 +1,4 @@
-import styled, { keyframes } from 'styled-components'
-
-const spin = keyframes`
-  to { transform: rotate(360deg); }
-`
+import styled from 'styled-components'
 
 export const IdeaListRoot = styled.div`
   display: flex;
@@ -35,9 +31,6 @@ export const NewBtn = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, box-shadow 0.15s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 
   &:hover:not(:disabled) {
     background: #6d28d9;
@@ -48,36 +41,6 @@ export const NewBtn = styled.button`
     opacity: 0.45;
     cursor: not-allowed;
   }
-`
-
-export const Spinner = styled.span`
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: ${spin} 0.6s linear infinite;
-`
-
-export const GenTerminal = styled.div`
-  background: rgba(0, 0, 0, 0.6);
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 10px 14px;
-  font-family: ${({ theme }) => theme.fonts.mono};
-  font-size: 10px;
-  max-height: 140px;
-  overflow-y: auto;
-  flex-shrink: 0;
-`
-
-export const LogLine = styled.div`
-  color: ${({ theme }) => theme.colors.logText};
-  margin-bottom: 2px;
-`
-
-export const LogCursor = styled.div`
-  color: ${({ theme }) => theme.colors.logText};
 `
 
 export const IdeaItems = styled.div`

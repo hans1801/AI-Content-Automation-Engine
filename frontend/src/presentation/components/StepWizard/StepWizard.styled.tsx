@@ -49,6 +49,17 @@ export const BtnPrimary = styled.button`
   }
 `
 
+export const StepHint = styled.p`
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 13px;
+`
+
+export const DoneText = styled.p<{ $completed?: boolean }>`
+  color: ${({ theme }) => theme.colors.success};
+  font-size: ${({ $completed }) => ($completed ? '16px' : '13px')};
+  font-weight: ${({ $completed }) => ($completed ? 700 : 500)};
+`
+
 export const BtnSecondary = styled.button`
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};

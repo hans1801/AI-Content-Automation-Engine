@@ -44,13 +44,21 @@ export const StepCheck = styled.div`
   flex-shrink: 0;
 `
 
-export const StepHint = styled.p`
+export const RegenerateBtn = styled.button`
+  background: none;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
   color: ${({ theme }) => theme.colors.textMuted};
+  padding: 4px 10px;
+  border-radius: 6px;
   font-size: 13px;
-`
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+  align-self: flex-start;
 
-export const DoneText = styled.p<{ $completed?: boolean }>`
-  color: ${({ theme }) => theme.colors.success};
-  font-size: ${({ $completed }) => ($completed ? '16px' : '13px')};
-  font-weight: ${({ $completed }) => ($completed ? 700 : 500)};
+  &:hover {
+    color: ${({ theme }) => theme.colors.text};
+    border-color: ${({ theme }) => theme.colors.accent};
+    color: ${({ theme }) => theme.colors.accentLight};
+  }
 `

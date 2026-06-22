@@ -21,6 +21,11 @@ export default function MainView() {
     }
   }, [])
 
+  const handleCreated = useCallback((idea: Idea) => {
+    setIdeas(prev => [...prev, idea])
+    setSelectedId(idea.id)
+  }, [])
+
   useEffect(() => {
     fetchIdeas()
   }, [fetchIdeas])
@@ -42,6 +47,7 @@ export default function MainView() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             onRefresh={fetchIdeas}
+            onCreated={handleCreated}
           />
         </Sidebar>
         <Main>

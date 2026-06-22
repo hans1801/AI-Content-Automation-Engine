@@ -1,15 +1,16 @@
 import { ReactNode } from 'react'
-import { Card, StepNumber, StepContent, StepTitle, StepCheck } from './StepCard.styled'
+import { Card, StepNumber, StepContent, StepTitle, StepCheck, RegenerateBtn } from './StepCard.styled'
 
 interface StepCardProps {
   num: string
   title: string
   done: boolean
   locked: boolean
-  children?: ReactNode
+  onRegenerate?: () => void
+  children: ReactNode
 }
 
-export default function StepCard({ num, title, done, locked, children }: StepCardProps) {
+export default function StepCard({ num, title, done, locked, onRegenerate, children }: StepCardProps) {
   return (
     <Card $done={done} $locked={locked}>
       <StepNumber $done={done}>{num}</StepNumber>
@@ -17,6 +18,9 @@ export default function StepCard({ num, title, done, locked, children }: StepCar
         <StepTitle>{title}</StepTitle>
         {children}
       </StepContent>
+      {done && onRegenerate && (
+        <RegenerateBtn onClick={onRegenerate} title="Regenerar">↺</RegenerateBtn>
+      )}
       {done && <StepCheck>✓</StepCheck>}
     </Card>
   )

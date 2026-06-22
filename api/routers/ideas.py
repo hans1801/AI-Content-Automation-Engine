@@ -36,11 +36,10 @@ def list_ideas(orientation: VideoOrientation = VideoOrientation.SHORT):
 
 
 @router.post("/generate")
-def generate_story(orientation: VideoOrientation = VideoOrientation.SHORT):
-    job_id = job_manager.create_job()
-    p = _pipeline(orientation)
-    _executor.submit(job_manager.run_in_job, job_id, p.step1_generate_story)
-    return {"job_id": job_id}
+def create_idea(orientation: VideoOrientation = VideoOrientation.SHORT):
+    st = _store(orientation)
+    idea = st.add(IdeaRaw(id=st.get_next_id(), title="", category="", state=State.NEW))
+    return idea.model_dump()
 
 
 @router.get("/stream/{job_id}")
@@ -54,6 +53,14 @@ async def stream(job_id: str):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.post("/{idea_id}/script")
+def regenerate_script(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
+    job_id = job_manager.create_job()
+    p = _pipeline(orientation)
+    _executor.submit(job_manager.run_in_job, job_id, lambda: p.step1_generate_story(idea_id))
+    return {"job_id": job_id}
 
 
 @router.get("/{idea_id}/script")
@@ -113,17 +120,38 @@ async def upload_videos(
     return {"id": idea.id, "state": idea.state, "files_uploaded": len(sorted_files)}
 
 
-@router.post("/{idea_id}/edition")
-def generate_edition(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
+@router.post("/{idea_id}/audio")
+def generate_audio(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
+    job_id = job_manager.create_job()
+    p = _pipeline(orientation)
+    _executor.submit(job_manager.run_in_job, job_id, lambda: p.step3_generate_audios(idea_id=idea_id))
+    return {"job_id": job_id}
+
+
+@router.post("/{idea_id}/sync")
+def generate_sync(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
+    job_id = job_manager.create_job()
+    p = _pipeline(orientation)
+    _executor.submit(job_manager.run_in_job, job_id, lambda: p.step4_generate_videos(idea_id=idea_id))
+    return {"job_id": job_id}
+
+
+@router.post("/{idea_id}/subtitles")
+def generate_subtitles(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
+    job_id = job_manager.create_job()
+    p = _pipeline(orientation)
+    _executor.submit(job_manager.run_in_job, job_id, lambda: p.step5_generate_subtitles(idea_id=idea_id))
+    return {"job_id": job_id}
+
+
+@router.post("/{idea_id}/assemble")
+def assemble_video(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
     job_id = job_manager.create_job()
     p = _pipeline(orientation)
 
-    def _all_steps():
-        p.step3_generate_audios(idea_id=idea_id)
-        p.step4_generate_videos(idea_id=idea_id)
-        p.step5_generate_subtitles(idea_id=idea_id)
+    def _run():
         p.step6_add_background_music(idea_id=idea_id)
         p.step7_rename_final_video(idea_id=idea_id)
 
-    _executor.submit(job_manager.run_in_job, job_id, _all_steps)
+    _executor.submit(job_manager.run_in_job, job_id, _run)
     return {"job_id": job_id}

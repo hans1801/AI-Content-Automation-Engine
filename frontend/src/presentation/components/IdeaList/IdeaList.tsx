@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Idea } from '../../tools/types'
-import useSSE from '../../tools/hooks/useSSE'
 import {
-  IdeaListRoot, ListHeader, IdeaCount, NewBtn, Spinner,
-  GenTerminal, LogLine, LogCursor, IdeaItems, NoIdeas,
-  IdeaItem, IdeaTitle, IdeaMeta, IdeaCategory, StateBadge,
+  IdeaListRoot, ListHeader, IdeaCount, NewBtn,
+  IdeaItems, NoIdeas, IdeaItem, IdeaTitle, IdeaMeta, IdeaCategory, StateBadge,
 } from './IdeaList.styled'
 
 const STATE_COLOR: Record<string, string> = {
@@ -24,66 +22,38 @@ interface IdeaListProps {
   selectedId: number | null
   onSelect: (id: number) => void
   onRefresh: () => void
+  onCreated: (idea: Idea) => void
 }
 
-export default function IdeaList({ ideas, selectedId, onSelect, onRefresh }: IdeaListProps) {
-  const [jobId, setJobId] = useState<string | null>(null)
-  const [generating, setGenerating] = useState(false)
-  const handled = useRef(false)
-  const terminalRef = useRef<HTMLDivElement>(null)
+export default function IdeaList({ ideas, selectedId, onSelect, onCreated }: IdeaListProps) {
+  const [creating, setCreating] = useState(false)
 
-  const { logs, done } = useSSE(jobId ? `/api/ideas/stream/${jobId}` : null)
-
-  useEffect(() => {
-    if (done && !handled.current) {
-      handled.current = true
-      setGenerating(false)
-      setJobId(null)
-      onRefresh()
-    }
-  }, [done, onRefresh])
-
-  useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight
-    }
-  }, [logs])
-
-  async function handleGenerate() {
-    handled.current = false
-    setGenerating(true)
+  async function handleCreate() {
+    setCreating(true)
     const res = await fetch('/api/ideas/generate', { method: 'POST' })
-    const { job_id } = (await res.json()) as { job_id: string }
-    setJobId(job_id)
+    const idea = (await res.json()) as Idea
+    setCreating(false)
+    onCreated(idea)
   }
 
   return (
     <IdeaListRoot>
       <ListHeader>
         <IdeaCount>{ideas.length} idea{ideas.length !== 1 ? 's' : ''}</IdeaCount>
-        <NewBtn onClick={handleGenerate} disabled={generating}>
-          {generating ? <Spinner /> : '+ Nueva'}
+        <NewBtn onClick={handleCreate} disabled={creating}>
+          {creating ? '…' : '+ Nueva'}
         </NewBtn>
       </ListHeader>
 
-      {generating && (
-        <GenTerminal ref={terminalRef}>
-          {logs.map((l, i) => (
-            <LogLine key={i}>{l}</LogLine>
-          ))}
-          <LogCursor>▋</LogCursor>
-        </GenTerminal>
-      )}
-
       <IdeaItems>
-        {ideas.length === 0 && !generating && (
+        {ideas.length === 0 && (
           <NoIdeas>Ninguna idea aún</NoIdeas>
         )}
         {[...ideas].reverse().map(idea => (
           <IdeaItem key={idea.id} $active={selectedId === idea.id} onClick={() => onSelect(idea.id)}>
-            <IdeaTitle>{idea.title || `Idea #${idea.id}`}</IdeaTitle>
+            <IdeaTitle>#{idea.id} — {idea.title || 'Sin título'}</IdeaTitle>
             <IdeaMeta>
-              <IdeaCategory>{idea.category}</IdeaCategory>
+              <IdeaCategory>{idea.category || '—'}</IdeaCategory>
               <StateBadge $color={STATE_COLOR[idea.state] ?? '#64748b'}>{idea.state}</StateBadge>
             </IdeaMeta>
           </IdeaItem>
