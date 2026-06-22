@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 from api import job_manager
 from flows.image_content_generator.pipeline.pipeline import Pipeline
+from flows.image_content_generator.pipeline.prompt_base.models import VideoScript
 from flows.image_content_generator.pipeline.schemas import (
     IdeaRaw,
     ScriptFormData,
@@ -78,6 +79,35 @@ def get_script(idea_id: int, orientation: VideoOrientation = VideoOrientation.SH
     if not path.exists():
         raise HTTPException(404, "Script not found")
     return FileResponse(str(path), filename="script.json")
+
+
+@router.post("/{idea_id}/script/upload")
+async def upload_script(
+    idea_id: int,
+    file: UploadFile = File(...),
+    title: str = "",
+    orientation: VideoOrientation = VideoOrientation.SHORT,
+):
+    content = await file.read()
+    try:
+        VideoScript.model_validate_json(content)
+    except Exception as exc:
+        raise HTTPException(422, f"Invalid script.json: {exc}")
+
+    idea_dir = _out(orientation) / "ideas" / f"idea_{idea_id:06d}"
+    idea_dir.mkdir(parents=True, exist_ok=True)
+    (idea_dir / "script.json").write_bytes(content)
+
+    st = _store(orientation)
+    idea = st.get_by_id(idea_id)
+    if not idea:
+        raise HTTPException(404, "Idea not found")
+
+    if title:
+        idea.title = title
+    idea.state = State.SCRIPT_GENERATED
+    st.save(idea)
+    return idea.model_dump()
 
 
 @router.post("/{idea_id}/images")

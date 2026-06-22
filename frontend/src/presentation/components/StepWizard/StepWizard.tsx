@@ -8,6 +8,7 @@ import Terminal from './components/Terminal/Terminal'
 import {
   Wizard, WizardHeader, WizardTitle, WizardCategory,
   BtnPrimary, BtnSecondary, DoneText,
+  ModeTabs, ModeTab, JsonUploadZone,
 } from './StepWizard.styled'
 
 const LEVEL: Record<string, number> = {
@@ -43,6 +44,8 @@ export default function StepWizard({ idea, onUpdate }: StepWizardProps) {
   const [reuploadImages, setReuploadImages] = useState(false)
   const [reuploadVideos, setReuploadVideos] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [scriptMode, setScriptMode] = useState<'generate' | 'upload'>('generate')
+  const [uploadingScript, setUploadingScript] = useState(false)
 
   // Single effect handles all step completions
   useEffect(() => {
@@ -61,6 +64,7 @@ export default function StepWizard({ idea, onUpdate }: StepWizardProps) {
     setReuploadImages(false)
     setReuploadVideos(false)
     setShowForm(false)
+    setScriptMode('generate')
   }, [idea.id])
 
   const base = `/api/ideas/${idea.id}`
@@ -75,6 +79,27 @@ export default function StepWizard({ idea, onUpdate }: StepWizardProps) {
     const { job_id } = (await res.json()) as { job_id: string }
     scriptStep.start(job_id)
   }
+  async function handleScriptUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingScript(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`${base}/script/upload`, { method: 'POST', body: form })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert(`Error: ${err.detail ?? 'Upload failed'}`)
+        return
+      }
+      setShowForm(false)
+      onUpdate()
+    } finally {
+      setUploadingScript(false)
+      e.target.value = ''
+    }
+  }
+
   async function handleAudio() { audioStep.start(await postJob(`${base}/audio`)) }
   async function handleSync() { syncStep.start(await postJob(`${base}/sync`)) }
   async function handleSubs() { subsStep.start(await postJob(`${base}/subtitles`)) }
@@ -96,10 +121,32 @@ export default function StepWizard({ idea, onUpdate }: StepWizardProps) {
         onRegenerate={level >= 1 && !scriptStep.jobId && !showForm ? () => setShowForm(true) : undefined}
       >
         {(level === 0 || showForm) && !scriptStep.jobId && (
-          <ScriptForm
-            initial={idea.form ?? DEFAULT_FORM}
-            onSubmit={handleScript}
-          />
+          <>
+            <ModeTabs>
+              <ModeTab $active={scriptMode === 'generate'} onClick={() => setScriptMode('generate')}>
+                ✦ Generar
+              </ModeTab>
+              <ModeTab $active={scriptMode === 'upload'} onClick={() => setScriptMode('upload')}>
+                ↑ Subir JSON
+              </ModeTab>
+            </ModeTabs>
+            {scriptMode === 'generate' ? (
+              <ScriptForm initial={idea.form ?? DEFAULT_FORM} onSubmit={handleScript} />
+            ) : (
+              <JsonUploadZone>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleScriptUpload}
+                  disabled={uploadingScript}
+                />
+                {uploadingScript ? '⏳ Subiendo…' : '📄 Selecciona un script.json'}
+                <span style={{ fontSize: '11px', opacity: 0.6 }}>
+                  Debe cumplir el esquema VideoScript
+                </span>
+              </JsonUploadZone>
+            )}
+          </>
         )}
         {level >= 1 && !showForm && !scriptStep.jobId && (
           <BtnSecondary onClick={() => window.open(`${base}/script`, '_blank')}>

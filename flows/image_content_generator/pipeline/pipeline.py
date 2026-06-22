@@ -4,6 +4,7 @@ from typing import Any, ClassVar, List, Optional, Type, TypeVar
 
 from pydantic import BaseModel, PrivateAttr
 
+from flows.image_content_generator.pipeline.prompt_base import constants as base_constants
 from flows.image_content_generator.pipeline.prompt_base.manager import BasePromptManager
 from flows.image_content_generator.pipeline.prompt_base.models import VideoScript
 from flows.image_content_generator.pipeline.schemas import (
@@ -13,8 +14,6 @@ from flows.image_content_generator.pipeline.schemas import (
     State,
     VideoOrientation,
 )
-from flows.image_content_generator.pipeline.prompt_base import constants as base_constants
-from flows.image_content_generator.pipeline.prompt_base.models import VideoScript
 from tools.audio_generation.audio_tool import AudioTool
 from tools.audio_generation.gemini import GeminiAudioGenerator
 from tools.common.base_model import BaseModelTool
@@ -27,6 +26,8 @@ from tools.video_editing.ffmpeg import FFmpegTool
 from tools.video_editing.whisper import WhisperTool
 
 T = TypeVar("T", bound=BaseModel)
+
+
 class Pipeline(BaseModelTool):
     """
     Main pipeline for the Image Content Generator project.

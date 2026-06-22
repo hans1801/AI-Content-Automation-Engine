@@ -55,6 +55,54 @@ export const DoneText = styled.p<{ $completed?: boolean }>`
   font-weight: ${({ $completed }) => ($completed ? 700 : 500)};
 `
 
+export const ModeTabs = styled.div`
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+`
+
+export const ModeTab = styled.button<{ $active: boolean }>`
+  background: ${({ theme, $active }) => ($active ? theme.colors.accent : 'transparent')};
+  color: ${({ theme, $active }) => ($active ? '#fff' : theme.colors.textMuted)};
+  border: 1px solid ${({ theme, $active }) => ($active ? theme.colors.accent : theme.colors.border)};
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.accent};
+    color: ${({ $active }) => ($active ? '#fff' : 'inherit')};
+  }
+`
+
+export const JsonUploadZone = styled.label`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px dashed ${({ theme }) => theme.colors.borderStrong};
+  border-radius: 10px;
+  padding: 24px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textMuted};
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.accent};
+    background: rgba(124, 58, 237, 0.05);
+    color: ${({ theme }) => theme.colors.accentLight};
+  }
+
+  input {
+    display: none;
+  }
+`
+
 export const BtnSecondary = styled.button`
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
