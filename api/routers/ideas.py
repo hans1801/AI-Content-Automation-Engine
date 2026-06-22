@@ -68,7 +68,7 @@ def get_script(idea_id: int, orientation: VideoOrientation = VideoOrientation.SH
     path = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "script.json"
     if not path.exists():
         raise HTTPException(404, "Script not found")
-    return FileResponse(str(path), filename=f"script_idea_{idea_id}.json")
+    return FileResponse(str(path), filename="script.json")
 
 
 @router.post("/{idea_id}/images")
