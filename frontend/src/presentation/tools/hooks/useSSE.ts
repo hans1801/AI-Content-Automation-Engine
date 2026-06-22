@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
-export default function useSSE(url) {
-  const [logs, setLogs] = useState([])
+export default function useSSE(url: string | null) {
+  const [logs, setLogs] = useState<string[]>([])
   const [done, setDone] = useState(false)
 
   useEffect(() => {
@@ -16,13 +16,13 @@ export default function useSSE(url) {
 
     const es = new EventSource(url)
 
-    es.onmessage = (e) => {
+    es.onmessage = (e: MessageEvent<string>) => {
       const msg = e.data
       if (msg === '[DONE]' || msg === '[TIMEOUT]') {
         setDone(true)
         es.close()
       } else {
-        setLogs((prev) => [...prev, msg])
+        setLogs(prev => [...prev, msg])
       }
     }
 
