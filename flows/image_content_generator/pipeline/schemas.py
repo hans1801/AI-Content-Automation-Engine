@@ -3,6 +3,8 @@ from typing import List
 
 from pydantic import BaseModel
 
+from tools.common.storage_folder import StoreRecord
+
 
 class State(str, Enum):
     NEW = "NEW"
@@ -31,8 +33,6 @@ class AudioAlignment(BaseModel):
     alignments: List[SceneAlignment]
 
 
-class IdeaRaw(BaseModel):
-    id: int
+class IdeaRaw(StoreRecord[State]):
     title: str
-    state: State
     category: str
