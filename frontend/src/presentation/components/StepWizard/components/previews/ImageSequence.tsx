@@ -18,6 +18,10 @@ const Layout = styled.div`
   display: flex;
   gap: 16px;
   align-items: flex-start;
+
+  @media (max-width: 500px) {
+    flex-direction: column;
+  }
 `
 
 const Filmstrip = styled.div`
@@ -30,6 +34,16 @@ const Filmstrip = styled.div`
   padding-right: 4px;
   scrollbar-width: thin;
   align-content: start;
+
+  @media (max-width: 900px) { grid-template-columns: repeat(3, 72px); }
+  @media (max-width: 700px) { grid-template-columns: repeat(2, 72px); }
+  @media (max-width: 500px) {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    max-height: 160px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
 `
 
 const ThumbWrap = styled.div<{ $selected: boolean }>`

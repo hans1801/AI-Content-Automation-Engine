@@ -13,18 +13,20 @@ const SectionLabel = styled.div`
 `
 
 const List = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 260px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-height: calc(100vh - 280px);
   overflow-y: auto;
   scrollbar-width: thin;
+
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
 `
 
 const Row = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 `
 
 const Num = styled.span`
