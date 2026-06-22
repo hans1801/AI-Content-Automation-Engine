@@ -2,15 +2,18 @@ import { useState, useEffect, useCallback } from 'react'
 import { Idea } from '../../tools/types'
 import IdeaList from '../../components/IdeaList/IdeaList'
 import StepWizard from '../../components/StepWizard/StepWizard'
+import ApiKeyModal from '../../components/ApiKeyModal/ApiKeyModal'
 import {
   AppLayout, Header, HeaderLogo, LogoDot, HeaderTitle,
-  Layout, Sidebar, Main, EmptyState, EmptyIcon,
+  Layout, Sidebar, Main, EmptyState, EmptyIcon, ApiKeyBtn, ApiKeyDot,
 } from './MainView.styled'
 
 export default function MainView() {
   const [ideas, setIdeas] = useState<Idea[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768)
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [keyConfigured, setKeyConfigured] = useState<boolean | null>(null)
 
   const fetchIdeas = useCallback(async () => {
     try {
@@ -25,7 +28,15 @@ export default function MainView() {
     setSelectedId(idea.id)
   }, [])
 
-  useEffect(() => { fetchIdeas() }, [fetchIdeas])
+  const checkKey = useCallback(async () => {
+    try {
+      const res = await fetch('/api/config/gemini-key')
+      const d = await res.json()
+      setKeyConfigured(d.configured)
+    } catch { setKeyConfigured(false) }
+  }, [])
+
+  useEffect(() => { fetchIdeas(); checkKey() }, [fetchIdeas, checkKey])
 
   useEffect(() => {
     const handler = () => { if (window.innerWidth < 768) setSidebarOpen(false) }
@@ -42,7 +53,15 @@ export default function MainView() {
           <LogoDot />
           <HeaderTitle>Content Engine</HeaderTitle>
         </HeaderLogo>
+        <ApiKeyBtn
+          onClick={() => setShowApiKey(true)}
+          title={keyConfigured ? 'Gemini key configurada' : 'Configurar Gemini API key'}
+        >
+          <ApiKeyDot $ok={keyConfigured === true} />
+          Gemini Key
+        </ApiKeyBtn>
       </Header>
+
       <Layout>
         <Sidebar $open={sidebarOpen}>
           <IdeaList
@@ -65,6 +84,10 @@ export default function MainView() {
           )}
         </Main>
       </Layout>
+
+      {showApiKey && (
+        <ApiKeyModal onClose={() => { setShowApiKey(false); checkKey() }} />
+      )}
     </AppLayout>
   )
 }
