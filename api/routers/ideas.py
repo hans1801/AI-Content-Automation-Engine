@@ -7,7 +7,12 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 from api import job_manager
 from flows.image_content_generator.pipeline.pipeline import Pipeline
-from flows.image_content_generator.pipeline.schemas import IdeaRaw, State, VideoOrientation
+from flows.image_content_generator.pipeline.schemas import (
+    IdeaRaw,
+    ScriptFormData,
+    State,
+    VideoOrientation,
+)
 from tools.common.storage_folder import FolderStore
 
 router = APIRouter(prefix="/api/ideas", tags=["ideas"])
@@ -56,10 +61,14 @@ async def stream(job_id: str):
 
 
 @router.post("/{idea_id}/script")
-def regenerate_script(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
+def generate_script(
+    idea_id: int,
+    form: ScriptFormData,
+    orientation: VideoOrientation = VideoOrientation.SHORT,
+):
     job_id = job_manager.create_job()
     p = _pipeline(orientation)
-    _executor.submit(job_manager.run_in_job, job_id, lambda: p.step1_generate_story(idea_id))
+    _executor.submit(job_manager.run_in_job, job_id, lambda: p.step1_generate_story(idea_id, form))
     return {"job_id": job_id}
 
 

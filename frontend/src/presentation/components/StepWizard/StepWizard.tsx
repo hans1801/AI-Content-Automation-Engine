@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Idea } from '../../tools/types'
+import { Idea, ScriptFormData, DEFAULT_FORM } from '../../tools/types'
 import { useJobStep } from '../../tools/hooks/useJobStep'
 import Uploader from '../Uploader/Uploader'
+import ScriptForm from '../ScriptForm/ScriptForm'
 import StepCard from './components/StepCard/StepCard'
 import Terminal from './components/Terminal/Terminal'
 import {
@@ -41,6 +42,7 @@ export default function StepWizard({ idea, onUpdate }: StepWizardProps) {
 
   const [reuploadImages, setReuploadImages] = useState(false)
   const [reuploadVideos, setReuploadVideos] = useState(false)
+  const [showForm, setShowForm] = useState(false)
 
   // Single effect handles all step completions
   useEffect(() => {
@@ -58,11 +60,21 @@ export default function StepWizard({ idea, onUpdate }: StepWizardProps) {
     ;[scriptStep, audioStep, syncStep, subsStep, assembleStep].forEach(s => s.reset())
     setReuploadImages(false)
     setReuploadVideos(false)
+    setShowForm(false)
   }, [idea.id])
 
   const base = `/api/ideas/${idea.id}`
 
-  async function handleScript() { scriptStep.start(await postJob(`${base}/script`)) }
+  async function handleScript(form: ScriptFormData) {
+    setShowForm(false)
+    const res = await fetch(`${base}/script`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    const { job_id } = (await res.json()) as { job_id: string }
+    scriptStep.start(job_id)
+  }
   async function handleAudio() { audioStep.start(await postJob(`${base}/audio`)) }
   async function handleSync() { syncStep.start(await postJob(`${base}/sync`)) }
   async function handleSubs() { subsStep.start(await postJob(`${base}/subtitles`)) }
@@ -81,12 +93,15 @@ export default function StepWizard({ idea, onUpdate }: StepWizardProps) {
       <StepCard
         num="01" title="Script"
         done={level >= 1} locked={false}
-        onRegenerate={level >= 1 && !scriptStep.jobId ? handleScript : undefined}
+        onRegenerate={level >= 1 && !scriptStep.jobId && !showForm ? () => setShowForm(true) : undefined}
       >
-        {level === 0 && !scriptStep.jobId && (
-          <BtnPrimary onClick={handleScript}>Generar Script</BtnPrimary>
+        {(level === 0 || showForm) && !scriptStep.jobId && (
+          <ScriptForm
+            initial={idea.form ?? DEFAULT_FORM}
+            onSubmit={handleScript}
+          />
         )}
-        {level >= 1 && !scriptStep.jobId && (
+        {level >= 1 && !showForm && !scriptStep.jobId && (
           <BtnSecondary onClick={() => window.open(`${base}/script`, '_blank')}>
             Descargar script.json
           </BtnSecondary>

@@ -1,20 +1,13 @@
-import random
-from typing import Sequence, Type
+from typing import Sequence
 
 from pydantic import BaseModel
 
 from flows.image_content_generator.pipeline.prompt_base import constants
-from flows.image_content_generator.pipeline.prompt_base.models import (
-    CategoryHandler,
-    SelectedConfig,
-)
 from tools.video_editing.whisper_schemas import WhisperTranscriptionSegment
 
 
 class BasePromptManager(BaseModel):
-    """
-    Base manager for prompts
-    """
+    """Base manager for prompts — audio generation and scene alignment."""
 
     # Prompts
     IMAGE_PROMPT: str = constants.IMAGE_PROMPT
@@ -23,20 +16,6 @@ class BasePromptManager(BaseModel):
 
     # Voice
     VOICE_NAME: str = "Fenrir"
-
-    CATEGORIES: Sequence[Type[CategoryHandler]] = []
-
-    def select_random_config(self) -> SelectedConfig:
-        """Picks a random handler and idea variant, returning a unified configuration object."""
-        selected_category = random.choice(self.CATEGORIES)
-        idea_model = selected_category.get_random_idea_variant()
-
-        return SelectedConfig(
-            category=f"{selected_category.__name__}_{idea_model.__name__}",
-            handler=selected_category,
-            idea_prompt=idea_model.get_idea_prompt(),
-            idea_model=idea_model,
-        )
 
     def get_audio_prompt(self, audio_text: str) -> str:
         """Formats the audio prompt."""

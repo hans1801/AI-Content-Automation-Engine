@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -33,6 +33,15 @@ class AudioAlignment(BaseModel):
     alignments: List[SceneAlignment]
 
 
+class ScriptFormData(BaseModel):
+    idea: str
+    style: str = "stickman"
+    category: str = "finanzas"
+    tone: str = "motivacional"
+    aspect_ratio: str = "9:16"
+
+
 class IdeaRaw(StoreRecord[State]):
     title: str
     category: str
+    form: Optional[ScriptFormData] = None

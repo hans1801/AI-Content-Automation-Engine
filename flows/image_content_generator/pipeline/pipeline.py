@@ -1,18 +1,20 @@
 
 from pathlib import Path
-from typing import Any, ClassVar, List, Optional, Type, TypeVar, Union
+from typing import Any, ClassVar, List, Optional, Type, TypeVar
 
 from pydantic import BaseModel, PrivateAttr
 
+from flows.image_content_generator.pipeline.prompt_base.manager import BasePromptManager
 from flows.image_content_generator.pipeline.prompt_base.models import VideoScript
-from flows.image_content_generator.pipeline.prompt_longs.manager import PromptManagerLongs
-from flows.image_content_generator.pipeline.prompt_shorts.manager import PromptManagerShorts
 from flows.image_content_generator.pipeline.schemas import (
     AudioAlignment,
     IdeaRaw,
+    ScriptFormData,
     State,
     VideoOrientation,
 )
+from flows.image_content_generator.pipeline.prompt_base import constants as base_constants
+from flows.image_content_generator.pipeline.prompt_base.models import VideoScript
 from tools.audio_generation.audio_tool import AudioTool
 from tools.audio_generation.gemini import GeminiAudioGenerator
 from tools.common.base_model import BaseModelTool
@@ -25,9 +27,6 @@ from tools.video_editing.ffmpeg import FFmpegTool
 from tools.video_editing.whisper import WhisperTool
 
 T = TypeVar("T", bound=BaseModel)
-PromptManager = Union[PromptManagerShorts, PromptManagerLongs]
-
-
 class Pipeline(BaseModelTool):
     """
     Main pipeline for the Image Content Generator project.
@@ -41,7 +40,7 @@ class Pipeline(BaseModelTool):
     _audio_gen: Optional[GeminiAudioGenerator] = PrivateAttr(default=None)
     _ffmpeg: Optional[FFmpegTool] = PrivateAttr(default=None)
     _whisper: Optional[WhisperTool] = PrivateAttr(default=None)
-    _prompt_manager: Optional[PromptManager] = PrivateAttr(default=None)
+    _prompt_manager: Optional[BasePromptManager] = PrivateAttr(default=None)
     _audio_tool: Optional[AudioTool] = PrivateAttr(default=None)
     _store: Optional[FolderStore[IdeaRaw]] = PrivateAttr(default=None)
 
@@ -53,7 +52,6 @@ class Pipeline(BaseModelTool):
     EDITIONS_DIR: ClassVar[str] = "editions"
 
     # Standard Output Files
-    IDEA_JSON: ClassVar[str] = "idea.json"
     SCRIPT_JSON: ClassVar[str] = "script.json"
     RAW_VIDEO: ClassVar[str] = "raw_video.mp4"
     SUBTITLED_VIDEO: ClassVar[str] = "subtitled_video.mp4"
@@ -114,14 +112,10 @@ class Pipeline(BaseModelTool):
         return self._audio_tool
 
     @property
-    def prompt_manager(self) -> PromptManager:
+    def prompt_manager(self) -> BasePromptManager:
+        """Returns the shared prompt manager (audio + alignment prompts)."""
         if self._prompt_manager is None:
-            if self.orientation == VideoOrientation.SHORT:
-                self._prompt_manager = PromptManagerShorts()
-            elif self.orientation == VideoOrientation.LONG:
-                self._prompt_manager = PromptManagerLongs()
-            else:
-                raise ValueError(f"Orientation {self.orientation} not supported.")
+            self._prompt_manager = BasePromptManager()
         return self._prompt_manager
 
     def load_json(
@@ -190,24 +184,40 @@ class Pipeline(BaseModelTool):
         title_slug = slugify(title)
         return self.get_idea_path(idea_id) / f"{title_slug}.mp4"
 
-    def step1_generate_story(self, idea_id: int):
+    def step1_generate_story(self, idea_id: int, form: ScriptFormData):
         idea_obj = self.store.get_by_id(idea_id)
         if not idea_obj:
             Messenger.error(f"Idea {idea_id} not found.")
             return
 
-        Messenger.info("\n--- Regenerating cinematic concept and script ---")
+        Messenger.info("\n--- Generating cinematic concept and script ---")
 
-        idea_data, script, category = self.prompt_manager.generate_full_story(self.text_gen)
-
-        idea_obj.title = idea_data.title
+        script, title, category = self._generate_from_form(form)
+        idea_obj.form = form
+        idea_obj.title = title
         idea_obj.category = category
-        self.save_json(idea_obj.id, self.IDEA_JSON, idea_data)
         self.save_json(idea_obj.id, self.SCRIPT_JSON, script)
-
         idea_obj.state = State.SCRIPT_GENERATED
         self.store.save(idea_obj)
-        Messenger.success(f"Script regenerated: {State.SCRIPT_GENERATED} finalized.\n")
+        Messenger.success(f"Script generated: {State.SCRIPT_GENERATED} finalized.\n")
+
+    def _generate_from_form(self, form: ScriptFormData) -> tuple[VideoScript, str, str]:
+        # Predefined values use curated descriptions; custom values are passed as-is
+        style_desc = base_constants.STYLE_DESCRIPTIONS.get(form.style, form.style)
+        tone_desc = base_constants.TONE_DESCRIPTIONS.get(form.tone, form.tone)
+        category_desc = base_constants.CATEGORY_DESCRIPTIONS.get(form.category, form.category)
+        prompt = base_constants.FORM_SCRIPT_PROMPT.format(
+            idea=form.idea,
+            style_desc=style_desc,
+            tone_desc=tone_desc,
+            category_desc=category_desc,
+            aspect_ratio=form.aspect_ratio,
+        ) + VideoScript.get_json_format_instructions()
+
+        Messenger.info(f"--- Generating script for: {form.idea[:60]}... ---")
+        script = self.text_gen.generate_text(prompt, VideoScript)
+        title = form.idea[:80].strip()
+        return script, title, form.category
 
     @retry(max_attempts=3)
     def step3_generate_audios(self, idea_id: int):
