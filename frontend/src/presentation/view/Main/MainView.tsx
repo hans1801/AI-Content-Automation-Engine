@@ -46,7 +46,6 @@ export default function MainView() {
             ideas={ideas}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            onRefresh={fetchIdeas}
             onCreated={handleCreated}
           />
         </Sidebar>

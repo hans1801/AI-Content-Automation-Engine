@@ -21,7 +21,6 @@ interface IdeaListProps {
   ideas: Idea[]
   selectedId: number | null
   onSelect: (id: number) => void
-  onRefresh: () => void
   onCreated: (idea: Idea) => void
 }
 
