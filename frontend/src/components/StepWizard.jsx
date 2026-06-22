@@ -32,21 +32,10 @@ function Terminal({ logs, running }) {
 }
 
 export default function StepWizard({ idea, onUpdate }) {
-  const [imgJob, setImgJob] = useState(null)
   const [edJob, setEdJob] = useState(null)
-  const imgHandled = useRef(false)
   const edHandled = useRef(false)
 
-  const { logs: imgLogs, done: imgDone } = useSSE(imgJob ? `/api/ideas/stream/${imgJob}` : null)
   const { logs: edLogs, done: edDone } = useSSE(edJob ? `/api/ideas/stream/${edJob}` : null)
-
-  useEffect(() => {
-    if (imgDone && !imgHandled.current) {
-      imgHandled.current = true
-      setImgJob(null)
-      onUpdate()
-    }
-  }, [imgDone, onUpdate])
 
   useEffect(() => {
     if (edDone && !edHandled.current) {
@@ -56,20 +45,10 @@ export default function StepWizard({ idea, onUpdate }) {
     }
   }, [edDone, onUpdate])
 
-  // Reset handled flags when idea changes
   useEffect(() => {
-    imgHandled.current = false
     edHandled.current = false
-    setImgJob(null)
     setEdJob(null)
   }, [idea.id])
-
-  async function handleImages() {
-    imgHandled.current = false
-    const res = await fetch(`/api/ideas/${idea.id}/images`, { method: 'POST' })
-    const { job_id } = await res.json()
-    setImgJob(job_id)
-  }
 
   async function handleEdition() {
     edHandled.current = false
@@ -107,20 +86,24 @@ export default function StepWizard({ idea, onUpdate }) {
         )}
       </StepCard>
 
-      {/* Step 2 — Images */}
+      {/* Step 2 — Upload Images */}
       <StepCard
         num="02"
-        title="Imágenes"
+        title="Subir Imágenes"
         done={level >= 2}
         locked={level < 1}
       >
-        {level === 1 && !imgJob && (
-          <button className="btn-primary" onClick={handleImages}>
-            Generar Imágenes con IA
-          </button>
+        {level === 1 && (
+          <Uploader
+            ideaId={idea.id}
+            endpoint="images"
+            accept=".png,.jpg,.jpeg,.webp"
+            label="Arrastra las imágenes o haz clic para seleccionar"
+            hint="PNG / JPG / WEBP — se ordenan por nombre"
+            onUploaded={onUpdate}
+          />
         )}
-        {imgJob && <Terminal logs={imgLogs} running={true} />}
-        {level >= 2 && <p className="done-text">✓ Imágenes generadas</p>}
+        {level >= 2 && <p className="done-text">✓ Imágenes subidas</p>}
       </StepCard>
 
       {/* Step 3 — Upload Videos */}
@@ -130,8 +113,17 @@ export default function StepWizard({ idea, onUpdate }) {
         done={level >= 3}
         locked={level < 2}
       >
-        {level === 2 && <Uploader ideaId={idea.id} onUploaded={onUpdate} />}
-        {level >= 3 && <p className="done-text">✓ {level >= 3 ? 'Videos subidos' : ''}</p>}
+        {level === 2 && (
+          <Uploader
+            ideaId={idea.id}
+            endpoint="videos"
+            accept=".mp4"
+            label="Arrastra los videos o haz clic para seleccionar"
+            hint="Solo .mp4 — se ordenan por nombre"
+            onUploaded={onUpdate}
+          />
+        )}
+        {level >= 3 && <p className="done-text">✓ Videos subidos</p>}
       </StepCard>
 
       {/* Step 4 — Edition */}

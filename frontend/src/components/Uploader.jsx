@@ -1,13 +1,17 @@
 import { useState, useRef } from 'react'
 
-export default function Uploader({ ideaId, onUploaded }) {
+export default function Uploader({ ideaId, endpoint = 'videos', accept = '.mp4', label, hint, onUploaded }) {
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef(null)
 
+  const acceptedExts = accept.split(',').map(e => e.trim().replace('.', ''))
+
   function addFiles(incoming) {
-    const mp4s = Array.from(incoming).filter((f) => f.name.toLowerCase().endsWith('.mp4'))
+    const mp4s = Array.from(incoming).filter((f) =>
+      acceptedExts.some(ext => f.name.toLowerCase().endsWith(`.${ext}`))
+    )
     setFiles((prev) => {
       const names = new Set(prev.map((f) => f.name))
       return [...prev, ...mp4s.filter((f) => !names.has(f.name))]
@@ -30,7 +34,7 @@ export default function Uploader({ ideaId, onUploaded }) {
     const sorted = [...files].sort((a, b) => a.name.localeCompare(b.name))
     const form = new FormData()
     sorted.forEach((f) => form.append('files', f))
-    await fetch(`/api/ideas/${ideaId}/videos`, { method: 'POST', body: form })
+    await fetch(`/api/ideas/${ideaId}/${endpoint}`, { method: 'POST', body: form })
     setFiles([])
     setUploading(false)
     onUploaded()
@@ -51,7 +55,7 @@ export default function Uploader({ ideaId, onUploaded }) {
           ref={inputRef}
           type="file"
           multiple
-          accept=".mp4,video/mp4"
+          accept={accept}
           style={{ display: 'none' }}
           onChange={(e) => addFiles(e.target.files)}
         />
@@ -59,8 +63,8 @@ export default function Uploader({ ideaId, onUploaded }) {
         {files.length === 0 ? (
           <div className="drop-hint">
             <div className="drop-icon">🎬</div>
-            <p>Arrastra los videos o haz clic para seleccionar</p>
-            <small>Solo .mp4 — se ordenarán por nombre de archivo</small>
+            <p>{label || 'Arrastra los archivos o haz clic para seleccionar'}</p>
+            <small>{hint || `Archivos ${accept} — se ordenan por nombre`}</small>
           </div>
         ) : (
           <div className="file-list" onClick={(e) => e.stopPropagation()}>

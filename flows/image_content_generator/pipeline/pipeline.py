@@ -18,8 +18,6 @@ from tools.audio_generation.gemini import GeminiAudioGenerator
 from tools.common.base_model import BaseModelTool
 from tools.common.messenger import Messenger
 from tools.common.storage_folder import FolderStore
-from tools.image_generation.gemini import GeminiImageGenerator
-from tools.image_generation.midjourney import ImageTask
 from tools.text_generation.gemini import GeminiTextGenerator
 from tools.utils.text import slugify
 from tools.utils.time import retry
@@ -40,7 +38,6 @@ class Pipeline(BaseModelTool):
     orientation: VideoOrientation
 
     _text_gen: Optional[GeminiTextGenerator] = PrivateAttr(default=None)
-    _image_gen: Optional[GeminiImageGenerator] = PrivateAttr(default=None)
     _audio_gen: Optional[GeminiAudioGenerator] = PrivateAttr(default=None)
     _ffmpeg: Optional[FFmpegTool] = PrivateAttr(default=None)
     _whisper: Optional[WhisperTool] = PrivateAttr(default=None)
@@ -73,7 +70,6 @@ class Pipeline(BaseModelTool):
 
     # Standard Resource Directories
     BG_MUSIC_DIR: ClassVar[str] = "bg-music"
-    REFERENCES_DIR: ClassVar[str] = "reference"
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
@@ -89,16 +85,6 @@ class Pipeline(BaseModelTool):
         if self._text_gen is None:
             self._text_gen = GeminiTextGenerator()
         return self._text_gen
-
-    @property
-    def image_gen(self) -> GeminiImageGenerator:
-        if self._image_gen is None:
-            ar_value = "9:16" if self.orientation == VideoOrientation.SHORT else "16:9"
-            self._image_gen = GeminiImageGenerator(
-                aspect_ratio=ar_value,
-                reference_dir=self.resource_base / self.REFERENCES_DIR,
-            )
-        return self._image_gen
 
     @property
     def audio_gen(self) -> GeminiAudioGenerator:
@@ -236,47 +222,6 @@ class Pipeline(BaseModelTool):
         idea_obj.state = State.SCRIPT_GENERATED
         self.store.save(idea_obj)
         Messenger.success(f"Step 1 ready: {State.SCRIPT_GENERATED} finalized.\n")
-
-    def step2_generate_images(self, idea_id: int):
-        """
-        Generate Images: Produces photorealistic visuals for each scene.
-        1. Retrieves the idea by ID.
-        2. Loads script.json for scene data.
-        3. Generates Images
-        4. Updates state.
-        """
-        # 1. Retrieves idea.
-        idea_obj = self.store.get_by_id(idea_id)
-        if not idea_obj:
-            Messenger.error(f"Idea {idea_id} not found.")
-            return
-
-        Messenger.info("\n--- Generating images for the script ---")
-
-        # 2. Loads script.json for scene data.
-        script_data = self.load_json(idea_obj.id, self.SCRIPT_JSON, VideoScript)
-
-        # 3. Identifies missing scenes and builds tasks
-        all_tasks: List[ImageTask] = []
-        for i, scene in enumerate(script_data.scenes):
-            out_path = self.get_idea_asset_path(
-                idea_obj.id, self.IMAGES_DIR, self.SCENE_IMAGE_PATTERN.format(i + 1)
-            )
-            if out_path.exists():
-                Messenger.info(f"Skipping Scene {i+1} image: File already exists.")
-                continue
-
-            all_tasks.append(
-                ImageTask(prompt=scene.image_prompt.formatted_prompt, output_path=out_path)
-            )
-
-        # 4. Process all tasks (batching handled internally by the generator)
-        self.image_gen.generate_images(tasks=all_tasks)
-
-        # 5. Updates state
-        idea_obj.state = State.IMAGES_GENERATED
-        self.store.save(idea_obj)
-        Messenger.success(f"Step 2 ready: {State.IMAGES_GENERATED} finalized.\n")
 
     @retry(max_attempts=3)
     def step3_generate_audios(self, idea_id: int):
