@@ -9,11 +9,68 @@ export const IdeaListRoot = styled.div`
 export const ListHeader = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 10px 10px 10px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   flex-shrink: 0;
+  overflow: hidden;
+
+  & > :last-child {
+    margin-left: auto;
+  }
 `
+
+export const CollapseBtn = styled.button`
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.textMuted};
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surfaceHover};
+    color: ${({ theme }) => theme.colors.accentLight};
+  }
+`
+
+export const CollapsedStrip = styled.button`
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 16px 0;
+  color: ${({ theme }) => theme.colors.textMuted};
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surfaceHover};
+    color: ${({ theme }) => theme.colors.accentLight};
+  }
+`
+
+export const CollapsedCount = styled.span`
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(135deg, #c4b5fd, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+`
+
 
 export const IdeaCount = styled.span`
   color: ${({ theme }) => theme.colors.textMuted};

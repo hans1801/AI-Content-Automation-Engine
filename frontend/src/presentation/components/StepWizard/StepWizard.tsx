@@ -3,30 +3,37 @@ import { Idea, ScriptFormData, DEFAULT_FORM } from '../../tools/types'
 import { useJobStep } from '../../tools/hooks/useJobStep'
 import Uploader from '../Uploader/Uploader'
 import ScriptForm from '../ScriptForm/ScriptForm'
-import StepCard from './components/StepCard/StepCard'
 import Terminal from './components/Terminal/Terminal'
+import PipelineHeader, { PipelineStep } from './components/PipelineHeader/PipelineHeader'
+import ScriptViewer from './components/previews/ScriptViewer'
+import ImageSequence from './components/previews/ImageSequence'
+import VideoSequence from './components/previews/VideoSequence'
+import AudioSequence from './components/previews/AudioSequence'
+import VideoPlayer from './components/previews/VideoPlayer'
 import {
   Wizard, WizardHeader, WizardTitle, WizardCategory,
-  BtnPrimary, BtnSecondary, DoneText,
+  StepDetail, StepDetailHeader, StepDetailNum, StepDetailTitle, StepDetailStatus,
+  ActionRow, BtnPrimary, BtnSecondary, DoneText,
   ModeTabs, ModeTab, JsonUploadZone,
 } from './StepWizard.styled'
 
 const LEVEL: Record<string, number> = {
-  NEW: 0,
-  SCRIPT_GENERATED: 1,
-  IMAGES_GENERATED: 2,
-  VIDEOS_GENERATED: 3,
-  AUDIO_GENERATED: 4,
-  VIDEO_GENERATED: 5,
-  VIDEO_SUBTITLED: 6,
-  VIDEO_MUSIC_GENERATED: 7,
-  COMPLETED: 8,
+  NEW: 0, SCRIPT_GENERATED: 1, IMAGES_GENERATED: 2, VIDEOS_GENERATED: 3,
+  AUDIO_GENERATED: 4, VIDEO_GENERATED: 5, VIDEO_SUBTITLED: 6,
+  VIDEO_MUSIC_GENERATED: 7, COMPLETED: 8,
 }
 
-interface StepWizardProps {
-  idea: Idea
-  onUpdate: () => void
-}
+const STEPS: PipelineStep[] = [
+  { num: '01', title: 'Script' },
+  { num: '02', title: 'Imágenes' },
+  { num: '03', title: 'Videos' },
+  { num: '04', title: 'Audio' },
+  { num: '05', title: 'Sincronización' },
+  { num: '06', title: 'Subtítulos' },
+  { num: '07', title: 'Final' },
+]
+
+interface Props { idea: Idea; onUpdate: () => void }
 
 async function postJob(url: string): Promise<string> {
   const res = await fetch(url, { method: 'POST' })
@@ -34,225 +41,287 @@ async function postJob(url: string): Promise<string> {
   return job_id
 }
 
-export default function StepWizard({ idea, onUpdate }: StepWizardProps) {
+export default function StepWizard({ idea, onUpdate }: Props) {
   const scriptStep = useJobStep()
-  const audioStep = useJobStep()
-  const syncStep = useJobStep()
-  const subsStep = useJobStep()
-  const assembleStep = useJobStep()
+  const audioStep  = useJobStep()
+  const syncStep   = useJobStep()
+  const subsStep   = useJobStep()
+  const assemble   = useJobStep()
 
-  const [reuploadImages, setReuploadImages] = useState(false)
-  const [reuploadVideos, setReuploadVideos] = useState(false)
-  const [showForm, setShowForm] = useState(false)
-  const [scriptMode, setScriptMode] = useState<'generate' | 'upload'>('generate')
-  const [uploadingScript, setUploadingScript] = useState(false)
+  const [selected, setSelected]         = useState(0)
+  const [showForm, setShowForm]         = useState(false)
+  const [scriptMode, setScriptMode]     = useState<'generate' | 'upload'>('generate')
+  const [uploadingScript, setUploadScript] = useState(false)
+  const [reuploadImages, setReupImages] = useState(false)
+  const [reuploadVideos, setReupVideos] = useState(false)
 
-  // Single effect handles all step completions
+  const level = LEVEL[idea.state] ?? 0
+
+  // Auto-select active step when idea loads
   useEffect(() => {
-    for (const step of [scriptStep, audioStep, syncStep, subsStep, assembleStep]) {
+    const active = Math.min(level, 6)
+    setSelected(active)
+    setShowForm(false)
+    setScriptMode('generate')
+    setReupImages(false)
+    setReupVideos(false)
+    ;[scriptStep, audioStep, syncStep, subsStep, assemble].forEach(s => s.reset())
+  }, [idea.id])
+
+  // Advance selected step when a job completes
+  useEffect(() => {
+    const pairs = [
+      [scriptStep, 1], [audioStep, 4], [syncStep, 5],
+      [subsStep, 6], [assemble, 6],
+    ] as const
+    for (const [step, next] of pairs) {
       if (step.done && !step.handled.current) {
         step.handled.current = true
         step.clear()
         onUpdate()
+        setSelected(next)
       }
     }
-  }, [scriptStep.done, audioStep.done, syncStep.done, subsStep.done, assembleStep.done, onUpdate])
-
-  // Reset all when idea changes
-  useEffect(() => {
-    ;[scriptStep, audioStep, syncStep, subsStep, assembleStep].forEach(s => s.reset())
-    setReuploadImages(false)
-    setReuploadVideos(false)
-    setShowForm(false)
-    setScriptMode('generate')
-  }, [idea.id])
+  }, [scriptStep.done, audioStep.done, syncStep.done, subsStep.done, assemble.done, onUpdate])
 
   const base = `/api/ideas/${idea.id}`
 
   async function handleScript(form: ScriptFormData) {
     setShowForm(false)
     const res = await fetch(`${base}/script`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     })
     const { job_id } = (await res.json()) as { job_id: string }
     scriptStep.start(job_id)
   }
+
   async function handleScriptUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploadingScript(true)
+    setUploadScript(true)
     try {
       const form = new FormData()
       form.append('file', file)
       const res = await fetch(`${base}/script/upload`, { method: 'POST', body: form })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        alert(`Error: ${err.detail ?? 'Upload failed'}`)
-        return
-      }
+      if (!res.ok) { alert('Error al subir el script'); return }
       setShowForm(false)
       onUpdate()
     } finally {
-      setUploadingScript(false)
+      setUploadScript(false)
       e.target.value = ''
     }
   }
 
-  async function handleAudio() { audioStep.start(await postJob(`${base}/audio`)) }
-  async function handleSync() { syncStep.start(await postJob(`${base}/sync`)) }
-  async function handleSubs() { subsStep.start(await postJob(`${base}/subtitles`)) }
-  async function handleAssemble() { assembleStep.start(await postJob(`${base}/assemble`)) }
+  async function handleAudio()    { audioStep.start(await postJob(`${base}/audio`)) }
+  async function handleSync()     { syncStep.start(await postJob(`${base}/sync`)) }
+  async function handleSubs()     { subsStep.start(await postJob(`${base}/subtitles`)) }
+  async function handleAssemble() { assemble.start(await postJob(`${base}/assemble`)) }
 
-  const level = LEVEL[idea.state] ?? 0
+  // ── Status helpers ──────────────────────────────────────────────────────────
+  function getStatus(i: number): 'done' | 'active' | 'running' | 'locked' {
+    const running = [scriptStep, null, null, audioStep, syncStep, subsStep, assemble]
+    if (running[i]?.jobId) return 'running'
+    const done = i < 6 ? level >= i + 1 : level === 8
+    if (done) return 'done'
+    const active = i < 6 ? level === i : level >= 6 && level < 8
+    if (active) return 'active'
+    return 'locked'
+  }
+
+  const stepDone = (i: number) => getStatus(i) === 'done'
+
+  // ── Step content renderer ───────────────────────────────────────────────────
+  function renderContent() {
+    switch (selected) {
+      // 01 Script
+      case 0: return (
+        <>
+          {(level === 0 || showForm) && !scriptStep.jobId ? (
+            <>
+              <ModeTabs>
+                <ModeTab $active={scriptMode === 'generate'} onClick={() => setScriptMode('generate')}>✦ Generar</ModeTab>
+                <ModeTab $active={scriptMode === 'upload'}   onClick={() => setScriptMode('upload')}>↑ Subir JSON</ModeTab>
+              </ModeTabs>
+              {scriptMode === 'generate'
+                ? <ScriptForm initial={idea.form ?? DEFAULT_FORM} onSubmit={handleScript} />
+                : (
+                  <JsonUploadZone>
+                    <input type="file" accept=".json,application/json" onChange={handleScriptUpload} disabled={uploadingScript} />
+                    {uploadingScript ? '⏳ Subiendo…' : '📄 Selecciona un script.json'}
+                    <span style={{ fontSize: '11px', opacity: 0.6 }}>Debe cumplir el esquema VideoScript</span>
+                  </JsonUploadZone>
+                )
+              }
+            </>
+          ) : null}
+          {scriptStep.jobId && <Terminal logs={scriptStep.logs} running />}
+          {level >= 1 && !showForm && !scriptStep.jobId && (
+            <>
+              <ActionRow>
+                <BtnSecondary onClick={() => window.open(`${base}/script`, '_blank')}>
+                  Descargar script.json
+                </BtnSecondary>
+                <BtnSecondary onClick={() => setShowForm(true)}>
+                  ↺ Regenerar
+                </BtnSecondary>
+              </ActionRow>
+              <ScriptViewer url={`${base}/script`} />
+            </>
+          )}
+        </>
+      )
+
+      // 02 Imágenes
+      case 1: return (
+        <>
+          {(level === 1 || reuploadImages) && (
+            <Uploader
+              ideaId={idea.id} endpoint="images"
+              accept=".png,.jpg,.jpeg,.webp"
+              label="Arrastra las imágenes o haz clic para seleccionar"
+              hint="PNG / JPG / WEBP — se ordenan por nombre"
+              onUploaded={() => { setReupImages(false); onUpdate() }}
+            />
+          )}
+          {level >= 2 && !reuploadImages && (
+            <>
+              <ActionRow>
+                <BtnSecondary onClick={() => setReupImages(true)}>↺ Resubir imágenes</BtnSecondary>
+              </ActionRow>
+              <ImageSequence baseUrl={base} />
+            </>
+          )}
+        </>
+      )
+
+      // 03 Videos
+      case 2: return (
+        <>
+          {(level === 2 || reuploadVideos) && (
+            <Uploader
+              ideaId={idea.id} endpoint="videos"
+              accept=".mp4"
+              label="Arrastra los videos o haz clic para seleccionar"
+              hint="Solo .mp4 — se ordenan por nombre"
+              onUploaded={() => { setReupVideos(false); onUpdate() }}
+            />
+          )}
+          {level >= 3 && !reuploadVideos && (
+            <>
+              <ActionRow>
+                <BtnSecondary onClick={() => setReupVideos(true)}>↺ Resubir videos</BtnSecondary>
+              </ActionRow>
+              <VideoSequence baseUrl={base} synced={false} />
+            </>
+          )}
+        </>
+      )
+
+      // 04 Audio
+      case 3: return (
+        <>
+          {level === 3 && !audioStep.jobId && (
+            <ActionRow><BtnPrimary onClick={handleAudio}>Generar Audio</BtnPrimary></ActionRow>
+          )}
+          {audioStep.jobId && <Terminal logs={audioStep.logs} running />}
+          {level >= 4 && !audioStep.jobId && (
+            <>
+              <ActionRow>
+                <BtnSecondary onClick={handleAudio}>↺ Regenerar Audio</BtnSecondary>
+              </ActionRow>
+              <AudioSequence baseUrl={base} />
+            </>
+          )}
+        </>
+      )
+
+      // 05 Sincronización
+      case 4: return (
+        <>
+          {level === 4 && !syncStep.jobId && (
+            <ActionRow><BtnPrimary onClick={handleSync}>Sincronizar Video</BtnPrimary></ActionRow>
+          )}
+          {syncStep.jobId && <Terminal logs={syncStep.logs} running />}
+          {level >= 5 && !syncStep.jobId && (
+            <>
+              <ActionRow>
+                <BtnSecondary onClick={handleSync}>↺ Re-sincronizar</BtnSecondary>
+              </ActionRow>
+              <VideoSequence baseUrl={base} synced sectionLabel="Escenas sincronizadas" />
+              <VideoPlayer src={`${base}/editions/raw_video.mp4`} label="Video ensamblado (sin subtítulos)" />
+            </>
+          )}
+        </>
+      )
+
+      // 06 Subtítulos
+      case 5: return (
+        <>
+          {level === 5 && !subsStep.jobId && (
+            <ActionRow><BtnPrimary onClick={handleSubs}>Generar Subtítulos</BtnPrimary></ActionRow>
+          )}
+          {subsStep.jobId && <Terminal logs={subsStep.logs} running />}
+          {level >= 6 && !subsStep.jobId && (
+            <>
+              <ActionRow>
+                <BtnSecondary onClick={handleSubs}>↺ Regenerar Subtítulos</BtnSecondary>
+              </ActionRow>
+              <VideoPlayer src={`${base}/editions/subtitled_video.mp4`} label="Video con subtítulos" />
+            </>
+          )}
+        </>
+      )
+
+      // 07 Final
+      case 6: return (
+        <>
+          {level >= 6 && level < 8 && !assemble.jobId && (
+            <ActionRow><BtnPrimary onClick={handleAssemble}>Ensamblar Video Final</BtnPrimary></ActionRow>
+          )}
+          {assemble.jobId && <Terminal logs={assemble.logs} running />}
+          {level === 8 && !assemble.jobId && (
+            <>
+              <ActionRow>
+                <DoneText $completed>🎬 Video completado</DoneText>
+                <BtnSecondary onClick={() => window.open(`${base}/video`, '_blank')}>
+                  Descargar video
+                </BtnSecondary>
+                <BtnSecondary onClick={handleAssemble}>↺ Re-ensamblar</BtnSecondary>
+              </ActionRow>
+              <VideoPlayer src={`${base}/video`} label="Video final" />
+            </>
+          )}
+        </>
+      )
+
+      default: return null
+    }
+  }
+
+  const currentStep = STEPS[selected]
+  const status = getStatus(selected)
 
   return (
     <Wizard>
       <WizardHeader>
         <WizardTitle>{idea.title || `Idea #${idea.id}`}</WizardTitle>
-        <WizardCategory>{idea.category}</WizardCategory>
+        {idea.category && <WizardCategory>{idea.category}</WizardCategory>}
       </WizardHeader>
 
-      {/* 01 — Script */}
-      <StepCard
-        num="01" title="Script"
-        done={level >= 1} locked={false}
-        onRegenerate={level >= 1 && !scriptStep.jobId && !showForm ? () => setShowForm(true) : undefined}
-      >
-        {(level === 0 || showForm) && !scriptStep.jobId && (
-          <>
-            <ModeTabs>
-              <ModeTab $active={scriptMode === 'generate'} onClick={() => setScriptMode('generate')}>
-                ✦ Generar
-              </ModeTab>
-              <ModeTab $active={scriptMode === 'upload'} onClick={() => setScriptMode('upload')}>
-                ↑ Subir JSON
-              </ModeTab>
-            </ModeTabs>
-            {scriptMode === 'generate' ? (
-              <ScriptForm initial={idea.form ?? DEFAULT_FORM} onSubmit={handleScript} />
-            ) : (
-              <JsonUploadZone>
-                <input
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={handleScriptUpload}
-                  disabled={uploadingScript}
-                />
-                {uploadingScript ? '⏳ Subiendo…' : '📄 Selecciona un script.json'}
-                <span style={{ fontSize: '11px', opacity: 0.6 }}>
-                  Debe cumplir el esquema VideoScript
-                </span>
-              </JsonUploadZone>
-            )}
-          </>
-        )}
-        {level >= 1 && !showForm && !scriptStep.jobId && (
-          <BtnSecondary onClick={() => window.open(`${base}/script`, '_blank')}>
-            Descargar script.json
-          </BtnSecondary>
-        )}
-        {scriptStep.jobId && <Terminal logs={scriptStep.logs} running={true} />}
-      </StepCard>
+      <PipelineHeader steps={STEPS} selected={selected} getStatus={getStatus} onSelect={setSelected} />
 
-      {/* 02 — Imágenes */}
-      <StepCard
-        num="02" title="Subir Imágenes"
-        done={level >= 2} locked={level < 1}
-        onRegenerate={level >= 2 && !reuploadImages ? () => setReuploadImages(true) : undefined}
-      >
-        {(level === 1 || reuploadImages) && (
-          <Uploader
-            ideaId={idea.id} endpoint="images"
-            accept=".png,.jpg,.jpeg,.webp"
-            label="Arrastra las imágenes o haz clic para seleccionar"
-            hint="PNG / JPG / WEBP — se ordenan por nombre"
-            onUploaded={() => { setReuploadImages(false); onUpdate() }}
-          />
-        )}
-        {level >= 2 && !reuploadImages && <DoneText>✓ Imágenes subidas</DoneText>}
-      </StepCard>
+      <StepDetail>
+        <StepDetailHeader>
+          <StepDetailNum>{currentStep.num}</StepDetailNum>
+          <StepDetailTitle>{currentStep.title}</StepDetailTitle>
+          <StepDetailStatus $done={stepDone(selected)}>
+            {status === 'running' ? '⟳ Procesando' : status === 'done' ? '✓ Completado' : status === 'active' ? '● En progreso' : '— Pendiente'}
+          </StepDetailStatus>
+        </StepDetailHeader>
 
-      {/* 03 — Videos */}
-      <StepCard
-        num="03" title="Subir Videos"
-        done={level >= 3} locked={level < 2}
-        onRegenerate={level >= 3 && !reuploadVideos ? () => setReuploadVideos(true) : undefined}
-      >
-        {(level === 2 || reuploadVideos) && (
-          <Uploader
-            ideaId={idea.id} endpoint="videos"
-            accept=".mp4"
-            label="Arrastra los videos o haz clic para seleccionar"
-            hint="Solo .mp4 — se ordenan por nombre"
-            onUploaded={() => { setReuploadVideos(false); onUpdate() }}
-          />
-        )}
-        {level >= 3 && !reuploadVideos && <DoneText>✓ Videos subidos</DoneText>}
-      </StepCard>
-
-      {/* 04 — Audio */}
-      <StepCard
-        num="04" title="Audio"
-        done={level >= 4} locked={level < 3}
-        onRegenerate={level >= 4 && !audioStep.jobId ? handleAudio : undefined}
-      >
-        {level === 3 && !audioStep.jobId && (
-          <BtnPrimary onClick={handleAudio}>Generar Audio</BtnPrimary>
-        )}
-        {audioStep.jobId && <Terminal logs={audioStep.logs} running={true} />}
-        {level >= 4 && !audioStep.jobId && <DoneText>✓ Audio generado</DoneText>}
-      </StepCard>
-
-      {/* 05 — Sincronización */}
-      <StepCard
-        num="05" title="Sincronización"
-        done={level >= 5} locked={level < 4}
-        onRegenerate={level >= 5 && !syncStep.jobId ? handleSync : undefined}
-      >
-        {level === 4 && !syncStep.jobId && (
-          <BtnPrimary onClick={handleSync}>Sincronizar Video</BtnPrimary>
-        )}
-        {syncStep.jobId && <Terminal logs={syncStep.logs} running={true} />}
-        {level >= 5 && !syncStep.jobId && <DoneText>✓ Video sincronizado</DoneText>}
-      </StepCard>
-
-      {/* 06 — Subtítulos */}
-      <StepCard
-        num="06" title="Subtítulos"
-        done={level >= 6} locked={level < 5}
-        onRegenerate={level >= 6 && !subsStep.jobId ? handleSubs : undefined}
-      >
-        {level === 5 && !subsStep.jobId && (
-          <BtnPrimary onClick={handleSubs}>Generar Subtítulos</BtnPrimary>
-        )}
-        {subsStep.jobId && <Terminal logs={subsStep.logs} running={true} />}
-        {level >= 6 && !subsStep.jobId && <DoneText>✓ Subtítulos añadidos</DoneText>}
-      </StepCard>
-
-      {/* 07 — Ensamble Final */}
-      <StepCard
-        num="07" title="Ensamble Final"
-        done={level === 8} locked={level < 6}
-        onRegenerate={level === 8 && !assembleStep.jobId ? handleAssemble : undefined}
-      >
-        {level >= 6 && level < 8 && !assembleStep.jobId && (
-          <BtnPrimary onClick={handleAssemble}>Ensamblar Video</BtnPrimary>
-        )}
-        {assembleStep.jobId && <Terminal logs={assembleStep.logs} running={true} />}
-        {level === 8 && !assembleStep.jobId && (
-          <DoneText $completed>🎬 Video completado</DoneText>
-        )}
-        {level === 8 && !assembleStep.jobId && (
-          <BtnSecondary
-            style={{ marginTop: '12px' }}
-            onClick={() => window.open(`${base}/video`, '_blank')}
-          >
-            Descargar video
-          </BtnSecondary>
-        )}
-      </StepCard>
+        {renderContent()}
+      </StepDetail>
     </Wizard>
   )
 }

@@ -48,10 +48,12 @@ export const Layout = styled.div`
   overflow: hidden;
 `
 
-export const Sidebar = styled.aside`
-  width: 290px;
+export const Sidebar = styled.aside<{ $open: boolean }>`
+  width: ${({ $open }) => ($open ? '290px' : '48px')};
+  min-width: ${({ $open }) => ($open ? '290px' : '48px')};
+  overflow: hidden;
+  transition: width 0.25s ease, min-width 0.25s ease;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
-  overflow-y: auto;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -61,6 +63,7 @@ export const Main = styled.main`
   flex: 1;
   overflow-y: auto;
   padding: 32px;
+  min-width: 0;
 `
 
 export const EmptyState = styled.div`

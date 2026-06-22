@@ -1,0 +1,47 @@
+import { Header, StepItem, Connector, Circle, StepLabel } from './PipelineHeader.styled'
+
+export interface PipelineStep {
+  num: string
+  title: string
+}
+
+type StepStatus = 'done' | 'active' | 'running' | 'locked'
+
+interface Props {
+  steps: PipelineStep[]
+  selected: number
+  getStatus: (i: number) => StepStatus
+  onSelect: (i: number) => void
+}
+
+export default function PipelineHeader({ steps, selected, getStatus, onSelect }: Props) {
+  return (
+    <Header>
+      {steps.map((step, i) => {
+        const status = getStatus(i)
+        const locked = status === 'locked'
+        return (
+          <>
+            <StepItem key={step.num}>
+              <Circle
+                $status={status}
+                $selected={i === selected}
+                onClick={() => !locked && onSelect(i)}
+                disabled={locked}
+                aria-label={`Paso ${step.num}: ${step.title}`}
+              >
+                {status === 'done' ? '✓' : step.num}
+              </Circle>
+              <StepLabel $selected={i === selected} $locked={locked}>
+                {step.title}
+              </StepLabel>
+            </StepItem>
+            {i < steps.length - 1 && (
+              <Connector key={`conn-${i}`} $filled={status === 'done'} />
+            )}
+          </>
+        )
+      })}
+    </Header>
+  )
+}

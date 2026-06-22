@@ -1,42 +1,67 @@
 import styled from 'styled-components'
 
 export const Wizard = styled.div`
-  max-width: 680px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 `
 
-export const WizardHeader = styled.div`
+export const StepDetail = styled.div`
+  flex: 1;
+`
+
+export const StepDetailHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
   margin-bottom: 28px;
 `
 
-export const WizardTitle = styled.h2`
-  font-size: 22px;
+export const StepDetailNum = styled.span`
+  font-size: 48px;
   font-weight: 800;
-  margin-bottom: 10px;
-  line-height: 1.3;
+  color: ${({ theme }) => theme.colors.border};
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 `
 
-export const WizardCategory = styled.span`
+export const StepDetailTitle = styled.h2`
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+`
+
+export const StepDetailStatus = styled.span<{ $done?: boolean }>`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.accentLight};
-  background: rgba(124, 58, 237, 0.15);
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  font-weight: 600;
+  color: ${({ theme, $done }) => ($done ? theme.colors.success : theme.colors.accentLight)};
+  background: ${({ $done }) =>
+    $done ? 'rgba(16,185,129,0.1)' : 'rgba(124,58,237,0.1)'};
+  border: 1px solid
+    ${({ theme, $done }) =>
+      $done ? theme.colors.successBorder : 'rgba(124,58,237,0.3)'};
   padding: 3px 10px;
   border-radius: 999px;
+  align-self: center;
+`
+
+export const ActionRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
 `
 
 export const BtnPrimary = styled.button`
   background: ${({ theme }) => theme.colors.accent};
   color: #fff;
   border: none;
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, box-shadow 0.15s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 
   &:hover:not(:disabled) {
     background: #6d28d9;
@@ -46,6 +71,23 @@ export const BtnPrimary = styled.button`
   &:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+  }
+`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
+export const BtnSecondary = styled.button`
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surfaceHover};
   }
 `
 
@@ -58,13 +100,14 @@ export const DoneText = styled.p<{ $completed?: boolean }>`
 export const ModeTabs = styled.div`
   display: flex;
   gap: 6px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 `
 
 export const ModeTab = styled.button<{ $active: boolean }>`
   background: ${({ theme, $active }) => ($active ? theme.colors.accent : 'transparent')};
   color: ${({ theme, $active }) => ($active ? '#fff' : theme.colors.textMuted)};
-  border: 1px solid ${({ theme, $active }) => ($active ? theme.colors.accent : theme.colors.border)};
+  border: 1px solid
+    ${({ theme, $active }) => ($active ? theme.colors.accent : theme.colors.border)};
   padding: 5px 14px;
   border-radius: 8px;
   font-size: 12px;
@@ -74,7 +117,6 @@ export const ModeTab = styled.button<{ $active: boolean }>`
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.accent};
-    color: ${({ $active }) => ($active ? '#fff' : 'inherit')};
   }
 `
 
@@ -91,6 +133,7 @@ export const JsonUploadZone = styled.label`
   transition: border-color 0.15s, background 0.15s;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textMuted};
+  max-width: 400px;
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.accent};
@@ -103,18 +146,13 @@ export const JsonUploadZone = styled.label`
   }
 `
 
-export const BtnSecondary = styled.button`
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.surfaceHover};
-  }
+export const WizardHeader = styled.div`margin-bottom: 24px;`
+export const WizardTitle = styled.h1`font-size: 24px; font-weight: 800; margin-bottom: 6px;`
+export const WizardCategory = styled.span`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.accentLight};
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  padding: 3px 10px;
+  border-radius: 999px;
 `

@@ -10,15 +10,14 @@ import {
 export default function MainView() {
   const [ideas, setIdeas] = useState<Idea[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768)
 
   const fetchIdeas = useCallback(async () => {
     try {
       const res = await fetch('/api/ideas')
       const data = (await res.json()) as Idea[]
       setIdeas(data)
-    } catch {
-      // server not ready
-    }
+    } catch { /* server not ready */ }
   }, [])
 
   const handleCreated = useCallback((idea: Idea) => {
@@ -26,9 +25,13 @@ export default function MainView() {
     setSelectedId(idea.id)
   }, [])
 
+  useEffect(() => { fetchIdeas() }, [fetchIdeas])
+
   useEffect(() => {
-    fetchIdeas()
-  }, [fetchIdeas])
+    const handler = () => { if (window.innerWidth < 768) setSidebarOpen(false) }
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
 
   const selectedIdea = ideas.find(i => i.id === selectedId) ?? null
 
@@ -41,10 +44,12 @@ export default function MainView() {
         </HeaderLogo>
       </Header>
       <Layout>
-        <Sidebar>
+        <Sidebar $open={sidebarOpen}>
           <IdeaList
             ideas={ideas}
             selectedId={selectedId}
+            isOpen={sidebarOpen}
+            onToggle={() => setSidebarOpen(o => !o)}
             onSelect={setSelectedId}
             onCreated={handleCreated}
           />

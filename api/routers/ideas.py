@@ -81,6 +81,71 @@ def get_script(idea_id: int, orientation: VideoOrientation = VideoOrientation.SH
     return FileResponse(str(path), filename="script.json")
 
 
+@router.get("/{idea_id}/images")
+def list_images(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
+    images_dir = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "images"
+    if not images_dir.exists():
+        return []
+    return sorted(f.name for f in images_dir.glob("scene_*"))
+
+
+@router.get("/{idea_id}/images/{filename}")
+def get_image(idea_id: int, filename: str, orientation: VideoOrientation = VideoOrientation.SHORT):
+    safe = Path(filename).name
+    path = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "images" / safe
+    if not path.exists():
+        raise HTTPException(404, "Image not found")
+    return FileResponse(str(path))
+
+
+@router.get("/{idea_id}/videos")
+def list_videos(idea_id: int, synced: bool = False, orientation: VideoOrientation = VideoOrientation.SHORT):
+    videos_dir = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "videos"
+    if not videos_dir.exists():
+        return []
+    files = [f.name for f in videos_dir.glob("scene_*.mp4")]
+    if synced:
+        files = [f for f in files if "_synced" in f]
+    else:
+        files = [f for f in files if "_synced" not in f]
+    return sorted(files)
+
+
+@router.get("/{idea_id}/videos/{filename}")
+def get_video_scene(idea_id: int, filename: str, orientation: VideoOrientation = VideoOrientation.SHORT):
+    safe = Path(filename).name
+    path = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "videos" / safe
+    if not path.exists():
+        raise HTTPException(404, "Video not found")
+    return FileResponse(str(path), media_type="video/mp4")
+
+
+@router.get("/{idea_id}/audios")
+def list_audios(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
+    audios_dir = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "audios"
+    if not audios_dir.exists():
+        return []
+    return sorted(f.name for f in audios_dir.glob("scene_*.wav"))
+
+
+@router.get("/{idea_id}/audios/{filename}")
+def get_audio(idea_id: int, filename: str, orientation: VideoOrientation = VideoOrientation.SHORT):
+    safe = Path(filename).name
+    path = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "audios" / safe
+    if not path.exists():
+        raise HTTPException(404, "Audio not found")
+    return FileResponse(str(path), media_type="audio/wav")
+
+
+@router.get("/{idea_id}/editions/{filename}")
+def get_edition(idea_id: int, filename: str, orientation: VideoOrientation = VideoOrientation.SHORT):
+    safe = Path(filename).name
+    path = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "editions" / safe
+    if not path.exists():
+        raise HTTPException(404, "Edition not found")
+    return FileResponse(str(path), media_type="video/mp4")
+
+
 @router.post("/{idea_id}/script/upload")
 async def upload_script(
     idea_id: int,
