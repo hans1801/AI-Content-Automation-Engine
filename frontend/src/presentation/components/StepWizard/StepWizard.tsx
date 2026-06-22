@@ -182,6 +182,14 @@ export default function StepWizard({ idea, onUpdate }: StepWizardProps) {
         {level === 8 && !assembleStep.jobId && (
           <DoneText $completed>🎬 Video completado</DoneText>
         )}
+        {level === 8 && !assembleStep.jobId && (
+          <BtnSecondary
+            style={{ marginTop: '12px' }}
+            onClick={() => window.open(`${base}/video`, '_blank')}
+          >
+            Descargar video
+          </BtnSecondary>
+        )}
       </StepCard>
     </Wizard>
   )

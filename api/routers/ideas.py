@@ -120,6 +120,15 @@ async def upload_videos(
     return {"id": idea.id, "state": idea.state, "files_uploaded": len(sorted_files)}
 
 
+@router.get("/{idea_id}/video")
+def get_video(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
+    idea_dir = _out(orientation) / "ideas" / f"idea_{idea_id:06d}"
+    videos = list(idea_dir.glob("*.mp4"))
+    if not videos:
+        raise HTTPException(404, "Video not found")
+    return FileResponse(str(videos[0]), filename=videos[0].name, media_type="video/mp4")
+
+
 @router.post("/{idea_id}/audio")
 def generate_audio(idea_id: int, orientation: VideoOrientation = VideoOrientation.SHORT):
     job_id = job_manager.create_job()
