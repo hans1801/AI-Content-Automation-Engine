@@ -61,11 +61,11 @@ class Pipeline(BaseModelTool):
     FINAL_VIDEO: ClassVar[str] = "final_video.mp4"
 
     # Standard Scene Patterns
-    SCENE_IMAGE_PATTERN: ClassVar[str] = "scene_{}.png"
-    SCENE_AUDIO_PATTERN: ClassVar[str] = "scene_{}.wav"
-    SCENE_VIDEO_PATTERN: ClassVar[str] = "scene_{}.mp4"
-    SCENE_VIDEO_SYNCED_PATTERN: ClassVar[str] = "scene_{}_synced.mp4"
-    BATCH_AUDIO_PATTERN: ClassVar[str] = "batch_{}.wav"
+    SCENE_IMAGE_PATTERN: ClassVar[str] = "scene_{:04d}.png"
+    SCENE_AUDIO_PATTERN: ClassVar[str] = "scene_{:04d}.wav"
+    SCENE_VIDEO_PATTERN: ClassVar[str] = "scene_{:04d}.mp4"
+    SCENE_VIDEO_SYNCED_PATTERN: ClassVar[str] = "scene_{:04d}_synced.mp4"
+    BATCH_AUDIO_PATTERN: ClassVar[str] = "batch_{:04d}.wav"
 
     # Standard Resource Directories
     BG_MUSIC_DIR: ClassVar[str] = "bg-music"

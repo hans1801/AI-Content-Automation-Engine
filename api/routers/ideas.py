@@ -188,7 +188,7 @@ async def upload_images(
     for i, file in enumerate(sorted_files, start=1):
         ext = Path(file.filename or "scene.png").suffix or ".png"
         content = await file.read()
-        (images_dir / f"scene_{i}{ext}").write_bytes(content)
+        (images_dir / f"scene_{i:04d}{ext}").write_bytes(content)
 
     st = _store(orientation)
     idea = st.get_by_id(idea_id)
@@ -212,7 +212,7 @@ async def upload_videos(
     sorted_files = sorted(files, key=lambda f: f.filename or "")
     for i, file in enumerate(sorted_files, start=1):
         content = await file.read()
-        (videos_dir / f"scene_{i}.mp4").write_bytes(content)
+        (videos_dir / f"scene_{i:04d}.mp4").write_bytes(content)
 
     st = _store(orientation)
     idea = st.get_by_id(idea_id)
