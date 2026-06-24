@@ -85,10 +85,8 @@ Actualmente estás generando una sección del guion completo.
 """
 
 # ====================================================================================
-# CORE PROMPTS (IMAGE, AUDIO)
+# CORE PROMPTS
 # ====================================================================================
-
-IMAGE_PROMPT: str = """{image_idea}"""
 
 AUDIO_PROMPT: str = """Narra el siguiente guion con voz clara, expresiva y envolvente. Adapta el tono al contenido: si es dramático sube la intensidad, si es educativo mantén ritmo firme y seguro, si es motivacional transmite energía y convicción. Lee exactamente el texto tal cual aparece, sin omitir ni agregar nada:
 

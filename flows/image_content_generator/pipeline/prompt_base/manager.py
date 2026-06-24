@@ -10,7 +10,6 @@ class BasePromptManager(BaseModel):
     """Base manager for prompts — audio generation and scene alignment."""
 
     # Prompts
-    IMAGE_PROMPT: str = constants.IMAGE_PROMPT
     AUDIO_PROMPT: str = constants.AUDIO_PROMPT
     ALIGNMENT_PROMPT: str = constants.ALIGNMENT_PROMPT
 

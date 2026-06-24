@@ -60,7 +60,6 @@ class Pipeline(BaseModelTool):
     FINAL_VIDEO: ClassVar[str] = "final_video.mp4"
 
     # Standard Scene Patterns
-    SCENE_IMAGE_PATTERN: ClassVar[str] = "scene_{:04d}.png"
     SCENE_AUDIO_PATTERN: ClassVar[str] = "scene_{:04d}.wav"
     SCENE_VIDEO_PATTERN: ClassVar[str] = "scene_{:04d}.mp4"
     SCENE_VIDEO_SYNCED_PATTERN: ClassVar[str] = "scene_{:04d}_synced.mp4"

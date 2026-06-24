@@ -9,7 +9,6 @@ import {
 const STATE_COLOR: Record<string, string> = {
   NEW: '#64748b',
   SCRIPT_GENERATED: '#3b82f6',
-  IMAGES_GENERATED: '#8b5cf6',
   VIDEOS_GENERATED: '#f59e0b',
   AUDIO_GENERATED: '#f97316',
   VIDEO_GENERATED: '#06b6d4',
