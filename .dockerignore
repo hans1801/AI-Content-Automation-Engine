@@ -1,0 +1,13 @@
+.venv
+.git
+.env
+node_modules
+frontend/node_modules
+frontend/dist
+**/__pycache__
+**/*.pyc
+flows/out_short
+flows/out_long
+models/whisper
+*.log
+.DS_Store
