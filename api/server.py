@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api import job_manager
 from api.routers import config as config_router
 from api.routers import ideas
+from api.routers import music as music_router
 
 
 @asynccontextmanager
@@ -36,6 +37,7 @@ app.add_middleware(
 
 app.include_router(ideas.router)
 app.include_router(config_router.router)
+app.include_router(music_router.router)
 
 
 @app.get("/api/health")

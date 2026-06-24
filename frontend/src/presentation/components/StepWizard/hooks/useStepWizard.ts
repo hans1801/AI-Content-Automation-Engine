@@ -34,7 +34,7 @@ export interface StepWizardState {
   handleAudio:        () => Promise<void>
   handleSync:         () => Promise<void>
   handleSubs:         () => Promise<void>
-  handleAssemble:     () => Promise<void>
+  handleAssemble:     (opts: { musicPath: string; bgVolume: number }) => Promise<void>
   getStatus:  (i: number) => StepStatus
   stepDone:   (i: number) => boolean
 }
@@ -102,7 +102,9 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
   const handleAudio    = useCallback(async () => { audioStep.start(await api.audio(idea.id)) },    [idea.id, audioStep])
   const handleSync     = useCallback(async () => { syncStep.start(await api.sync(idea.id)) },      [idea.id, syncStep])
   const handleSubs     = useCallback(async () => { subsStep.start(await api.subtitles(idea.id)) }, [idea.id, subsStep])
-  const handleAssemble = useCallback(async () => { assemble.start(await api.assemble(idea.id)) },  [idea.id, assemble])
+  const handleAssemble = useCallback(async (opts: { musicPath: string; bgVolume: number }) => {
+    assemble.start(await api.assemble(idea.id, opts))
+  }, [idea.id, assemble])
 
   const getStatus = useCallback((i: number): StepStatus => {
     const isRunning =

@@ -1,4 +1,4 @@
-import { Idea, ScriptFormData } from './types'
+import { Idea, MusicNode, ScriptFormData } from './types'
 
 const BASE = '/api'
 
@@ -37,7 +37,38 @@ export const api = {
   audio:    (ideaId: number) => postJob(`${BASE}/ideas/${ideaId}/audio`),
   sync:     (ideaId: number) => postJob(`${BASE}/ideas/${ideaId}/sync`),
   subtitles:(ideaId: number) => postJob(`${BASE}/ideas/${ideaId}/subtitles`),
-  assemble: (ideaId: number) => postJob(`${BASE}/ideas/${ideaId}/assemble`),
+  assemble: async (ideaId: number, opts: { musicPath: string; bgVolume: number }): Promise<string> => {
+    const form = new FormData()
+    form.append('bg_volume', String(opts.bgVolume))
+    form.append('music_path', opts.musicPath)
+    const res = await fetch(`${BASE}/ideas/${ideaId}/assemble`, { method: 'POST', body: form })
+    if (!res.ok) throw new Error(`POST assemble failed: ${res.status}`)
+    const { job_id } = await res.json() as { job_id: string }
+    return job_id
+  },
+
+  music: {
+    list: (): Promise<MusicNode[]> => fetch(`${BASE}/music`).then(r => r.json()),
+    upload: async (files: File[], folder = ''): Promise<void> => {
+      const form = new FormData()
+      files.forEach(f => form.append('files', f))
+      if (folder) form.append('folder', folder)
+      const res = await fetch(`${BASE}/music/upload`, { method: 'POST', body: form })
+      if (!res.ok) throw new Error('Music upload failed')
+    },
+    createFolder: async (name: string, parent = ''): Promise<void> => {
+      const form = new FormData()
+      form.append('name', name)
+      if (parent) form.append('parent', parent)
+      const res = await fetch(`${BASE}/music/folder`, { method: 'POST', body: form })
+      if (!res.ok) throw new Error('Create folder failed')
+    },
+    delete: async (path: string): Promise<void> => {
+      const res = await fetch(`${BASE}/music/${path}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Delete failed')
+    },
+    streamUrl: (path: string) => `${BASE}/music/${path}/stream`,
+  },
 
   geminiKey: {
     check: (): Promise<{ configured: boolean; source: string | null }> =>

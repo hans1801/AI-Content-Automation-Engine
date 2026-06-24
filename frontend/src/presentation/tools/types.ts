@@ -27,6 +27,10 @@ export type IdeaState =
 
 export type PipelineLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
 
+export type MusicNode =
+  | { type: 'file'; name: string; path: string; size: number }
+  | { type: 'dir';  name: string; path: string; children: MusicNode[] }
+
 export interface Idea {
   id: number
   title: string

@@ -422,14 +422,14 @@ class Pipeline(BaseModelTool):
         self.store.save(idea_obj)
         Messenger.success(f"Step 5 ready: {State.VIDEO_SUBTITLED} finalized.\n")
 
-    def step6_add_background_music(self, idea_id: int):
+    def step6_add_background_music(
+        self,
+        idea_id: int,
+        music_path: Path,
+        bg_volume: float,
+    ):
         """
-        Background Music: Adds a random background track to the subtitled video.
-        1. Retrieves the idea by ID.
-        2. Prepares directories.
-        3. Picks a random audio file.
-        4. Mixes it with low volume and looping.
-        5. Updates state.
+        Background Music: Adds a background track to the subtitled video.
         """
         idea_obj = self.store.get_by_id(idea_id)
         if not idea_obj:
@@ -438,7 +438,6 @@ class Pipeline(BaseModelTool):
 
         Messenger.info("\n--- Adding background music ---")
 
-        # 2. Prepares directories.
         subtitled_video = self.get_idea_asset_path(
             idea_obj.id, self.EDITIONS_DIR, self.SUBTITLED_VIDEO
         )
@@ -446,17 +445,15 @@ class Pipeline(BaseModelTool):
             idea_obj.id, self.EDITIONS_DIR, self.FINAL_VIDEO
         )
 
-        # 3. Picks a random audio file
-        selected_music = self.audio_tool.get_random_audio()
-        if not selected_music:
+        if not music_path.exists():
+            Messenger.error(f"Music file not found: {music_path}")
             return
 
-        # 4. Mixes it with low volume and looping.
         self.ffmpeg.add_background_music(
             subtitled_video,
-            selected_music,
+            music_path,
             final_with_music,
-            bg_volume=0.18  # Subtle atmosphere
+            bg_volume=bg_volume,
         )
 
         # 5. Updates state.
