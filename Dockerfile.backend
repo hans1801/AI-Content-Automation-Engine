@@ -24,10 +24,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Binario de whisper desde el stage anterior
 COPY --from=whisper-builder /tmp/whisper/build/bin/whisper-cli /usr/local/bin/whisper-cli
 
-# Descargar modelo de whisper durante el build
-RUN mkdir -p /app/models/whisper && \
-    curl -L --retry 3 -o /app/models/whisper/ggml-small.bin \
+# Descargar modelo de whisper fuera de /app para que el bind mount no lo pise
+RUN mkdir -p /opt/whisper && \
+    curl -L --retry 3 -o /opt/whisper/ggml-small.bin \
     "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin"
+
+ENV WHISPER_MODEL_PATH=/opt/whisper/ggml-small.bin
 
 # Poetry
 ENV POETRY_VERSION=1.8.3 \
