@@ -63,12 +63,12 @@ export const Circle = styled.button<{
   color: ${({ theme, $status }) => {
     if ($status === 'done') return theme.colors.success
     if ($status === 'active' || $status === 'running') return theme.colors.accentLight
-    return theme.colors.textMuted
+    return theme.colors.text
   }};
   font-size: 13px;
   font-weight: 700;
   cursor: ${({ $status }) => ($status === 'locked' ? 'not-allowed' : 'pointer')};
-  opacity: ${({ $status }) => ($status === 'locked' ? 0.35 : 1)};
+  opacity: ${({ $status }) => ($status === 'locked' ? 0.55 : 1)};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -87,18 +87,18 @@ export const Circle = styled.button<{
 `
 
 export const StepLabel = styled.span<{ $selected: boolean; $locked: boolean }>`
-  font-size: 10px;
+  font-size: 11px;
   font-weight: ${({ $selected }) => ($selected ? 700 : 500)};
   color: ${({ theme, $selected, $locked }) =>
-    $locked
-      ? theme.colors.border
-      : $selected
+    $selected
       ? theme.colors.accentLight
-      : theme.colors.textMuted};
-  white-space: nowrap;
+      : $locked
+      ? theme.colors.textMuted
+      : theme.colors.text};
+  white-space: normal;
+  word-break: break-word;
   transition: color 0.2s;
   text-align: center;
-  max-width: 64px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 80px;
+  line-height: 1.3;
 `

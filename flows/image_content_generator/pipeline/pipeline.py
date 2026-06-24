@@ -47,7 +47,6 @@ class Pipeline(BaseModelTool):
 
     # Standard Output Directories
     IDEAS_DIR: ClassVar[str] = "ideas"
-    IMAGES_DIR: ClassVar[str] = "images"
     AUDIOS_DIR: ClassVar[str] = "audios"
     VIDEOS_DIR: ClassVar[str] = "videos"
     EDITIONS_DIR: ClassVar[str] = "editions"

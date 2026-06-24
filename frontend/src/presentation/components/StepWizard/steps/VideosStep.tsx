@@ -15,7 +15,7 @@ interface Props {
 export default function VideosStep({ idea, base, level, reupload, onSetReupload, onUploaded }: Props) {
   return (
     <>
-      {(level === 2 || reupload) && (
+      {(level === 1 || reupload) && (
         <Uploader
           ideaId={idea.id}
           endpoint="videos"
@@ -25,7 +25,7 @@ export default function VideosStep({ idea, base, level, reupload, onSetReupload,
           onUploaded={() => { onSetReupload(false); onUploaded() }}
         />
       )}
-      {level >= 3 && !reupload && (
+      {level >= 2 && !reupload && (
         <>
           <ActionRow>
             <BtnSecondary onClick={() => onSetReupload(true)}>↺ Resubir videos</BtnSecondary>

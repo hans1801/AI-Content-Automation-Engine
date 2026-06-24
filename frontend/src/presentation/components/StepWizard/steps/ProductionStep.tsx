@@ -75,21 +75,21 @@ export default function ProductionStep({ base, level, subsStep, assembleStep, on
     onAssemble({ musicPath: selectedPath, bgVolume: volume / 100 })
   }
 
-  const videoSrc = level >= 8
+  const videoSrc = level >= 7
     ? `${base}/video`
     : `${base}/editions/subtitled_video.mp4`
 
-  const videoLabel = level >= 8 ? 'Video final' : 'Video con subtítulos'
+  const videoLabel = level >= 7 ? 'Video final' : 'Video con subtítulos'
 
   return (
     <>
-      {level === 5 && !anyRunning && (
+      {level === 4 && !anyRunning && (
         <ActionRow><BtnPrimary onClick={onSubs}>Generar Subtítulos</BtnPrimary></ActionRow>
       )}
 
       {subsStep.jobId && <Terminal logs={subsStep.logs} running />}
 
-      {level >= 6 && !anyRunning && (
+      {level >= 5 && !anyRunning && (
         <TwoCol>
           {/* Left — music controls */}
           <Left>
@@ -110,7 +110,7 @@ export default function ProductionStep({ base, level, subsStep, assembleStep, on
               <VolumePct>{volume}%</VolumePct>
             </VolumeRow>
 
-            {level >= 6 && level < 8 && (
+            {level >= 5 && level < 7 && (
               <ActionRow>
                 <BtnPrimary onClick={handleAssemble} disabled={!selectedPath}>
                   Agregar Música y Finalizar
@@ -119,7 +119,7 @@ export default function ProductionStep({ base, level, subsStep, assembleStep, on
               </ActionRow>
             )}
 
-            {level === 8 && (
+            {level === 7 && (
               <ActionRow>
                 <DoneText $completed>🎬 Video completado</DoneText>
                 <BtnSecondary onClick={() => window.open(`${base}/video`, '_blank')}>

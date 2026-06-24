@@ -15,11 +15,11 @@ interface Props {
 export default function AssemblyStep({ base, level, jobStep, onAssemble }: Props) {
   return (
     <>
-      {level === 4 && !jobStep.jobId && (
+      {level === 3 && !jobStep.jobId && (
         <ActionRow><BtnPrimary onClick={onAssemble}>Ensamblar Video</BtnPrimary></ActionRow>
       )}
       {jobStep.jobId && <Terminal logs={jobStep.logs} running />}
-      {level >= 5 && !jobStep.jobId && (
+      {level >= 4 && !jobStep.jobId && (
         <>
           <ActionRow>
             <BtnSecondary onClick={onAssemble}>↺ Re-ensamblar</BtnSecondary>

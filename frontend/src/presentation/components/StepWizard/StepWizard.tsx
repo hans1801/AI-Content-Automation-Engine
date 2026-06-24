@@ -2,7 +2,6 @@ import { Idea } from '../../tools/types'
 import PipelineHeader, { PipelineStep } from './components/PipelineHeader/PipelineHeader'
 import { useStepWizard } from './hooks/useStepWizard'
 import ScriptStep    from './steps/ScriptStep'
-import ImagesStep    from './steps/ImagesStep'
 import VideosStep    from './steps/VideosStep'
 import AudioStep     from './steps/AudioStep'
 import AssemblyStep  from './steps/AssemblyStep'
@@ -14,11 +13,10 @@ import {
 
 const STEPS: PipelineStep[] = [
   { num: '01', title: 'Script' },
-  { num: '02', title: 'Imágenes' },
-  { num: '03', title: 'Videos' },
-  { num: '04', title: 'Audio' },
-  { num: '05', title: 'Ensamblado' },
-  { num: '06', title: 'Producción Final' },
+  { num: '02', title: 'Escenas' },
+  { num: '03', title: 'Voz en off' },
+  { num: '04', title: 'Ensamblado' },
+  { num: '05', title: 'Subtítulos y música' },
 ]
 
 const STATUS_LABEL: Record<string, string> = {
@@ -48,32 +46,25 @@ export default function StepWizard({ idea, onUpdate }: Props) {
         />
       )
       case 1: return (
-        <ImagesStep
-          idea={idea} base={base} level={w.level}
-          reupload={w.reuploadImages} onSetReupload={w.setReupImages}
-          onUploaded={onUpdate}
-        />
-      )
-      case 2: return (
         <VideosStep
           idea={idea} base={base} level={w.level}
           reupload={w.reuploadVideos} onSetReupload={w.setReupVideos}
           onUploaded={onUpdate}
         />
       )
-      case 3: return (
+      case 2: return (
         <AudioStep
           base={base} level={w.level}
           jobStep={w.audioStep} onGenerate={w.handleAudio}
         />
       )
-      case 4: return (
+      case 3: return (
         <AssemblyStep
           base={base} level={w.level}
           jobStep={w.syncStep} onAssemble={w.handleSync}
         />
       )
-      case 5: return (
+      case 4: return (
         <ProductionStep
           base={base} level={w.level}
           subsStep={w.subsStep} assembleStep={w.assemble}

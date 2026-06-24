@@ -96,29 +96,6 @@ def get_script(
     return FileResponse(str(path), filename="script.json")
 
 
-@router.get("/{idea_id}/images")
-def list_images(
-    idea_id: int,
-    orientation: VideoOrientation = VideoOrientation.SHORT,
-) -> list[str]:
-    images_dir = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "images"
-    if not images_dir.exists():
-        return []
-    return sorted(f.name for f in images_dir.glob("scene_*"))
-
-
-@router.get("/{idea_id}/images/{filename}")
-def get_image(
-    idea_id: int,
-    filename: str,
-    orientation: VideoOrientation = VideoOrientation.SHORT,
-) -> FileResponse:
-    safe = Path(filename).name
-    path = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "images" / safe
-    if not path.exists():
-        raise HTTPException(404, "Image not found")
-    return FileResponse(str(path))
-
 
 @router.get("/{idea_id}/videos")
 def list_videos(
@@ -212,30 +189,6 @@ async def upload_script(
     st.save(idea)
     return idea.model_dump()
 
-
-@router.post("/{idea_id}/images")
-async def upload_images(
-    idea_id: int,
-    files: List[UploadFile] = File(...),
-    orientation: VideoOrientation = VideoOrientation.SHORT,
-) -> dict[str, Any]:
-    images_dir = _out(orientation) / "ideas" / f"idea_{idea_id:06d}" / "images"
-    images_dir.mkdir(parents=True, exist_ok=True)
-
-    sorted_files = sorted(files, key=lambda f: f.filename or "")
-    for i, file in enumerate(sorted_files, start=1):
-        ext = Path(file.filename or "scene.png").suffix or ".png"
-        content = await file.read()
-        (images_dir / f"scene_{i:04d}{ext}").write_bytes(content)
-
-    st = _store(orientation)
-    idea = st.get_by_id(idea_id)
-    if not idea:
-        raise HTTPException(404, "Idea not found")
-
-    idea.state = State.IMAGES_GENERATED
-    st.save(idea)
-    return {"id": idea.id, "state": idea.state, "files_uploaded": len(sorted_files)}
 
 
 @router.post("/{idea_id}/videos")

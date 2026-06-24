@@ -9,8 +9,7 @@ from tools.common.storage_folder import StoreRecord
 class State(str, Enum):
     NEW = "NEW"
     SCRIPT_GENERATED = "SCRIPT_GENERATED"
-    IMAGES_GENERATED = "IMAGES_GENERATED"
-    VIDEOS_GENERATED = "VIDEOS_GENERATED"  # Set manually after external AI video generation
+    VIDEOS_GENERATED = "VIDEOS_GENERATED"
     AUDIO_GENERATED = "AUDIO_GENERATED"
     VIDEO_GENERATED = "VIDEO_GENERATED"
     VIDEO_SUBTITLED = "VIDEO_SUBTITLED"

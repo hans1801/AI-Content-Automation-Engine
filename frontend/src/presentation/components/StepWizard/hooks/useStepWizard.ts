@@ -4,9 +4,9 @@ import { api } from '../../../tools/api'
 import { useJobStep } from '../../../tools/hooks/useJobStep'
 
 const LEVEL: Record<IdeaState, PipelineLevel> = {
-  NEW: 0, SCRIPT_GENERATED: 1, IMAGES_GENERATED: 2, VIDEOS_GENERATED: 3,
-  AUDIO_GENERATED: 4, VIDEO_GENERATED: 5, VIDEO_SUBTITLED: 6,
-  VIDEO_MUSIC_GENERATED: 7, COMPLETED: 8,
+  NEW: 0, SCRIPT_GENERATED: 1, VIDEOS_GENERATED: 2,
+  AUDIO_GENERATED: 3, VIDEO_GENERATED: 4, VIDEO_SUBTITLED: 5,
+  VIDEO_MUSIC_GENERATED: 6, COMPLETED: 7,
 }
 
 export type StepStatus = 'done' | 'active' | 'running' | 'locked'
@@ -20,8 +20,6 @@ export interface StepWizardState {
   scriptMode: 'generate' | 'upload'
   setScriptMode: (m: 'generate' | 'upload') => void
   uploadingScript: boolean
-  reuploadImages: boolean
-  setReupImages: (v: boolean) => void
   reuploadVideos: boolean
   setReupVideos: (v: boolean) => void
   scriptStep: ReturnType<typeof useJobStep>
@@ -50,17 +48,15 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
   const [showForm, setShowForm]            = useState(false)
   const [scriptMode, setScriptMode]        = useState<'generate' | 'upload'>('generate')
   const [uploadingScript, setUploadScript] = useState(false)
-  const [reuploadImages, setReupImages]    = useState(false)
   const [reuploadVideos, setReupVideos]    = useState(false)
 
   const level: PipelineLevel = LEVEL[idea.state]
 
   // Reset all state when idea changes
   useEffect(() => {
-    setSelected(Math.min(level, 5))
+    setSelected(Math.min(level, 4))
     setShowForm(false)
     setScriptMode('generate')
-    setReupImages(false)
     setReupVideos(false)
     ;[scriptStep, audioStep, syncStep, subsStep, assemble].forEach(s => s.reset())
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -69,8 +65,8 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
   // Auto-advance to next step when a job completes
   useEffect(() => {
     const pairs = [
-      [scriptStep, 1], [audioStep, 4], [syncStep, 5],
-      [subsStep, 5], [assemble, 5],
+      [scriptStep, 1], [audioStep, 3], [syncStep, 4],
+      [subsStep, 4], [assemble, 4],
     ] as const
     for (const [step, next] of pairs) {
       if (step.done && !step.handled.current) {
@@ -109,13 +105,13 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
   const getStatus = useCallback((i: number): StepStatus => {
     const isRunning =
       (i === 0 && !!scriptStep.jobId) ||
-      (i === 3 && !!audioStep.jobId)  ||
-      (i === 4 && !!syncStep.jobId)   ||
-      (i === 5 && !!(subsStep.jobId || assemble.jobId))
+      (i === 2 && !!audioStep.jobId)  ||
+      (i === 3 && !!syncStep.jobId)   ||
+      (i === 4 && !!(subsStep.jobId || assemble.jobId))
     if (isRunning) return 'running'
-    const done = i < 5 ? level >= i + 1 : level === 8
+    const done = i < 4 ? level >= i + 1 : level === 7
     if (done) return 'done'
-    const active = i < 5 ? level === i : level >= 5 && level < 8
+    const active = i < 4 ? level === i : level >= 4 && level < 7
     if (active) return 'active'
     return 'locked'
   }, [level, scriptStep.jobId, audioStep.jobId, syncStep.jobId, subsStep.jobId, assemble.jobId])
@@ -127,7 +123,6 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
     showForm, setShowForm,
     scriptMode, setScriptMode,
     uploadingScript,
-    reuploadImages, setReupImages,
     reuploadVideos, setReupVideos,
     scriptStep, audioStep, syncStep, subsStep, assemble,
     handleScript, handleScriptUpload,

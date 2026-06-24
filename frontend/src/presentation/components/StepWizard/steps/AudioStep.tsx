@@ -14,11 +14,11 @@ interface Props {
 export default function AudioStep({ base, level, jobStep, onGenerate }: Props) {
   return (
     <>
-      {level === 3 && !jobStep.jobId && (
+      {level === 2 && !jobStep.jobId && (
         <ActionRow><BtnPrimary onClick={onGenerate}>Generar Audio</BtnPrimary></ActionRow>
       )}
       {jobStep.jobId && <Terminal logs={jobStep.logs} running />}
-      {level >= 4 && !jobStep.jobId && (
+      {level >= 3 && !jobStep.jobId && (
         <>
           <ActionRow>
             <BtnSecondary onClick={onGenerate}>↺ Regenerar Audio</BtnSecondary>
