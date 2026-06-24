@@ -7,6 +7,8 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
+      # Volumen persistente para el modelo whisper (fuera del bind mount de /app)
+      - whisper_model:/opt/whisper
     environment:
       - PYTHONUNBUFFERED=1
 
@@ -25,3 +27,5 @@ services:
     depends_on:
       - backend
 
+volumes:
+  whisper_model:
