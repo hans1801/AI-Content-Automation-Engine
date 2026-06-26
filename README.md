@@ -15,7 +15,7 @@ That's it. FFmpeg, Whisper.cpp, Python, and all dependencies run inside containe
 
 1. Clone the repository:
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/hans1801/AI-Content-Automation-Engine.git
    cd AI-Content-Automation-Engine
    ```
 
@@ -40,4 +40,3 @@ That's it. FFmpeg, Whisper.cpp, Python, and all dependencies run inside containe
 - **Transcription**: [Whisper.cpp](https://github.com/ggerganov/whisper.cpp) — local, fast, offline
 - **Video Core**: [FFmpeg](https://ffmpeg.org/)
 - **Data Layer**: CSV-based lifecycle tracking
-
