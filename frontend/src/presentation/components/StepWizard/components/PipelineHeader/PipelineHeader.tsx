@@ -33,7 +33,7 @@ export default function PipelineHeader({ steps, selected, getStatus, onSelect }:
               >
                 {status === 'done' ? '✓' : step.num}
               </Circle>
-              <StepLabel $selected={i === selected} $locked={locked}>
+              <StepLabel $selected={i === selected} $locked={locked} $done={status === 'done'}>
                 {step.title}
               </StepLabel>
             </StepItem>

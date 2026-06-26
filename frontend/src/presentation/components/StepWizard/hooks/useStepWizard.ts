@@ -62,18 +62,14 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idea.id])
 
-  // Auto-advance to next step when a job completes
+  // Refresh idea state when a job completes (no auto-advance)
   useEffect(() => {
-    const pairs = [
-      [scriptStep, 1], [audioStep, 3], [syncStep, 4],
-      [subsStep, 4], [assemble, 4],
-    ] as const
-    for (const [step, next] of pairs) {
+    const steps = [scriptStep, audioStep, syncStep, subsStep, assemble]
+    for (const step of steps) {
       if (step.done && !step.handled.current) {
         step.handled.current = true
         step.clear()
         onUpdate()
-        setSelected(next)
       }
     }
   }, [scriptStep.done, audioStep.done, syncStep.done, subsStep.done, assemble.done, onUpdate])
@@ -95,7 +91,7 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
     }
   }, [idea.id, onUpdate])
 
-  const handleAudio    = useCallback(async () => { audioStep.start(await api.audio(idea.id)) },    [idea.id, audioStep])
+  const handleAudio    = useCallback(async () => { audioStep.start(await api.audio(idea.id, level >= 3)) },    [idea.id, audioStep, level])
   const handleSync     = useCallback(async () => { syncStep.start(await api.sync(idea.id)) },      [idea.id, syncStep])
   const handleSubs     = useCallback(async () => { subsStep.start(await api.subtitles(idea.id)) }, [idea.id, subsStep])
   const handleAssemble = useCallback(async (opts: { musicPath: string; bgVolume: number }) => {

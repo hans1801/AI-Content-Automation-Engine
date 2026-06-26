@@ -47,54 +47,68 @@ export const Circle = styled.button<{
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: 2px solid
+
+  /* Border */
+  border: ${({ $selected }) => ($selected ? '3px' : '2px')} solid
     ${({ theme, $status, $selected }) => {
-      if ($selected) return theme.colors.accent
-      if ($status === 'done') return theme.colors.success
-      if ($status === 'active' || $status === 'running') return theme.colors.accent
+      if ($selected)             return '#fff'
+      if ($status === 'done')    return theme.colors.success
+      if ($status === 'active')  return 'rgba(255,255,255,0.6)'
+      if ($status === 'running') return theme.colors.accent
       return theme.colors.border
     }};
+
+  /* Background — selected gets solid white-tinted fill regardless of status */
   background: ${({ theme, $status, $selected }) => {
-    if ($status === 'done') return 'rgba(16, 185, 129, 0.15)'
-    if ($selected || $status === 'active' || $status === 'running')
-      return 'rgba(124, 58, 237, 0.2)'
+    if ($selected) {
+      if ($status === 'done')    return 'rgba(16, 185, 129, 0.35)'
+      if ($status === 'running') return 'rgba(124, 58, 237, 0.35)'
+      return 'rgba(255,255,255,0.15)'
+    }
+    if ($status === 'done')    return 'rgba(16, 185, 129, 0.12)'
+    if ($status === 'active')  return 'rgba(255,255,255,0.06)'
+    if ($status === 'running') return 'rgba(124, 58, 237, 0.2)'
     return theme.colors.surface
   }};
-  color: ${({ theme, $status }) => {
-    if ($status === 'done') return theme.colors.success
-    if ($status === 'active' || $status === 'running') return theme.colors.accentLight
-    return theme.colors.text
+
+  /* Text/icon color */
+  color: ${({ theme, $status, $selected }) => {
+    if ($selected)             return '#fff'
+    if ($status === 'done')    return theme.colors.success
+    if ($status === 'active')  return 'rgba(255,255,255,0.7)'
+    if ($status === 'running') return theme.colors.accentLight
+    return theme.colors.textMuted
   }};
+
   font-size: 13px;
   font-weight: 700;
   cursor: ${({ $status }) => ($status === 'locked' ? 'not-allowed' : 'pointer')};
-  opacity: ${({ $status }) => ($status === 'locked' ? 0.55 : 1)};
+  opacity: ${({ $status }) => ($status === 'locked' ? 0.4 : 1)};
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  box-shadow: ${({ theme, $selected }) =>
-    $selected ? `0 0 0 3px ${theme.colors.accentGlow}` : 'none'};
+
+  /* Selected: glow blanco prominente */
+  box-shadow: ${({ $selected }) =>
+    $selected ? '0 0 0 4px rgba(255,255,255,0.25), 0 0 12px rgba(255,255,255,0.1)' : 'none'};
 
   &:hover:not(:disabled) {
-    border-color: ${({ theme, $status }) =>
-      $status !== 'locked' ? theme.colors.accent : theme.colors.border};
-    box-shadow: ${({ theme, $status }) =>
-      $status !== 'locked' ? `0 0 0 3px ${theme.colors.accentGlow}` : 'none'};
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
   }
 
   ${({ $status }) => $status === 'running' && runningRing}
 `
 
-export const StepLabel = styled.span<{ $selected: boolean; $locked: boolean }>`
+export const StepLabel = styled.span<{ $selected: boolean; $locked: boolean; $done: boolean }>`
   font-size: 11px;
   font-weight: ${({ $selected }) => ($selected ? 700 : 500)};
-  color: ${({ theme, $selected, $locked }) =>
-    $selected
-      ? theme.colors.accentLight
-      : $locked
-      ? theme.colors.textMuted
-      : theme.colors.text};
+  color: ${({ theme, $selected, $locked, $done }) => {
+    if ($selected) return '#fff'
+    if ($done)     return theme.colors.success
+    if ($locked)   return theme.colors.textMuted
+    return theme.colors.text
+  }};
   white-space: normal;
   word-break: break-word;
   transition: color 0.2s;

@@ -2,8 +2,9 @@ import { Idea, PipelineLevel, ScriptFormData, DEFAULT_FORM } from '../../../tool
 import ScriptForm from '../../ScriptForm/ScriptForm'
 import Terminal from '../components/Terminal/Terminal'
 import ScriptViewer from '../components/previews/ScriptViewer'
-import { ActionRow, BtnSecondary, ModeTabs, ModeTab, JsonUploadZone } from '../StepWizard.styled'
+import { JsonUploadZone } from '../StepWizard.styled'
 import { JobStep } from '../../../tools/hooks/useJobStep'
+import { UploadLink, UploadWrap, BackLink } from './ScriptStep.styled'
 
 interface Props {
   idea: Idea
@@ -36,18 +37,24 @@ export default function ScriptStep({
     <>
       {showEditor && (
         <>
-          <ModeTabs>
-            <ModeTab $active={scriptMode === 'generate'} onClick={() => onSetScriptMode('generate')}>✦ Generar</ModeTab>
-            <ModeTab $active={scriptMode === 'upload'}   onClick={() => onSetScriptMode('upload')}>↑ Subir JSON</ModeTab>
-          </ModeTabs>
           {scriptMode === 'generate' ? (
-            <ScriptForm initial={idea.form ?? DEFAULT_FORM} onSubmit={onSubmit} />
+            <>
+              <ScriptForm initial={idea.form ?? DEFAULT_FORM} onSubmit={onSubmit} />
+              <UploadLink onClick={() => onSetScriptMode('upload')}>
+                ¿Ya tienes un script? Subir archivo JSON
+              </UploadLink>
+            </>
           ) : (
-            <JsonUploadZone>
-              <input type="file" accept=".json,application/json" onChange={handleFileChange} disabled={uploadingScript} />
-              {uploadingScript ? '⏳ Subiendo…' : '📄 Selecciona un script.json'}
-              <span style={{ fontSize: '11px', opacity: 0.6 }}>Debe cumplir el esquema VideoScript</span>
-            </JsonUploadZone>
+            <UploadWrap>
+              <BackLink onClick={() => onSetScriptMode('generate')}>
+                ← Volver a generar con IA
+              </BackLink>
+              <JsonUploadZone>
+                <input type="file" accept=".json,application/json" onChange={handleFileChange} disabled={uploadingScript} />
+                {uploadingScript ? '⏳ Subiendo…' : '↑ Selecciona un script.json'}
+                <span style={{ fontSize: '11px', opacity: 0.6 }}>Debe cumplir el esquema VideoScript</span>
+              </JsonUploadZone>
+            </UploadWrap>
           )}
         </>
       )}
@@ -55,13 +62,7 @@ export default function ScriptStep({
       {jobStep.jobId && <Terminal logs={jobStep.logs} running />}
 
       {level >= 1 && !showForm && !jobStep.jobId && (
-        <>
-          <ActionRow>
-            <BtnSecondary onClick={() => window.open(`${base}/script`, '_blank')}>Descargar script.json</BtnSecondary>
-            <BtnSecondary onClick={() => onSetShowForm(true)}>↺ Regenerar</BtnSecondary>
-          </ActionRow>
-          <ScriptViewer url={`${base}/script`} />
-        </>
+        <ScriptViewer url={`${base}/script`} />
       )}
     </>
   )

@@ -9,6 +9,7 @@ import ProductionStep from './steps/ProductionStep'
 import {
   Wizard, WizardHeader, WizardTitle, WizardCategory,
   StepDetail, StepDetailHeader, StepDetailNum, StepDetailTitle, StepDetailStatus,
+  BtnPrimary, BtnSecondary,
 } from './StepWizard.styled'
 
 const STEPS: PipelineStep[] = [
@@ -96,6 +97,37 @@ export default function StepWizard({ idea, onUpdate }: Props) {
           <StepDetailStatus $done={w.stepDone(w.selected)}>
             {STATUS_LABEL[status]}
           </StepDetailStatus>
+
+          {/* Acciones contextuales del paso actual */}
+          {w.selected === 0 && w.level >= 1 && !w.showForm && !w.scriptStep.jobId && (
+            <>
+              <BtnSecondary style={{ marginLeft: 'auto' }} onClick={() => window.open(`${base}/script`, '_blank')}>
+                ↓ Descargar script
+              </BtnSecondary>
+              <BtnSecondary onClick={() => w.setShowForm(true)}>↺ Regenerar</BtnSecondary>
+            </>
+          )}
+
+          {status === 'done' && w.selected < STEPS.length - 1 && (
+            <BtnPrimary
+              style={{ marginLeft: w.selected === 0 ? undefined : 'auto' }}
+              onClick={() => w.setSelected(w.selected + 1)}
+            >
+              Siguiente →
+            </BtnPrimary>
+          )}
+
+          {w.selected === STEPS.length - 1 && w.level >= 5 && !w.subsStep.jobId && !w.assemble.jobId && (
+            <BtnPrimary
+              style={{ marginLeft: 'auto' }}
+              onClick={() => window.open(
+                w.level >= 7 ? `${base}/video` : `${base}/editions/subtitled_video.mp4`,
+                '_blank'
+              )}
+            >
+              ⬇ Descargar video
+            </BtnPrimary>
+          )}
         </StepDetailHeader>
 
         {renderStep()}

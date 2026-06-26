@@ -20,7 +20,7 @@ export const StepDetailHeader = styled.div`
 export const StepDetailNum = styled.span`
   font-size: 48px;
   font-weight: 800;
-  color: ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.textMuted};
   line-height: 1;
   font-variant-numeric: tabular-nums;
 `

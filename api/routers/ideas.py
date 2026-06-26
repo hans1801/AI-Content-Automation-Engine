@@ -230,6 +230,7 @@ def get_video(
 @router.post("/{idea_id}/audio")
 def generate_audio(
     idea_id: int,
+    force: bool = False,
     orientation: VideoOrientation = VideoOrientation.SHORT,
 ) -> dict[str, str]:
     job_id = job_manager.create_job()
@@ -237,7 +238,7 @@ def generate_audio(
     _executor.submit(
         job_manager.run_in_job,
         job_id,
-        lambda: p.step3_generate_audios(idea_id=idea_id),
+        lambda: p.step3_generate_audios(idea_id=idea_id, force=force),
     )
     return {"job_id": job_id}
 

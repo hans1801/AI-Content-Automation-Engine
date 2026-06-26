@@ -66,7 +66,7 @@ export default function IdeaList({ ideas, selectedId, isOpen, onToggle, onSelect
         </CollapseBtn>
         <IdeaCount>{ideas.length} idea{ideas.length !== 1 ? 's' : ''}</IdeaCount>
         <NewBtn onClick={handleCreate} disabled={creating}>
-          {creating ? '…' : '+ Nueva'}
+          {creating ? '…' : '+ Crear video'}
         </NewBtn>
       </ListHeader>
 

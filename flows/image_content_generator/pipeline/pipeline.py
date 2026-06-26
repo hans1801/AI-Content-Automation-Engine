@@ -219,7 +219,7 @@ class Pipeline(BaseModelTool):
         return script, title, form.category
 
     @retry(max_attempts=3)
-    def step3_generate_audios(self, idea_id: int):
+    def step3_generate_audios(self, idea_id: int, force: bool = False):
         """
         Generate Audio: Batched AI-Guided Batching (Whisper + Gemini).
         Processes scenes in groups of 10 for maximum stability and alignment precision.
@@ -228,6 +228,13 @@ class Pipeline(BaseModelTool):
         if not idea_obj:
             Messenger.error(f"Idea {idea_id} not found.")
             return
+
+        if force:
+            import shutil
+            audios_dir = self.get_idea_subdir(idea_obj.id, self.AUDIOS_DIR)
+            if audios_dir.exists():
+                shutil.rmtree(audios_dir)
+                Messenger.info("Cleared existing audio files for regeneration.")
 
         Messenger.info("\n--- Generating batched audio for the script ---")
         script_data = self.load_json(idea_obj.id, self.SCRIPT_JSON, VideoScript)

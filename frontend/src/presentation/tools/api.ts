@@ -34,7 +34,8 @@ export const api = {
     },
   },
 
-  audio:    (ideaId: number) => postJob(`${BASE}/ideas/${ideaId}/audio`),
+  audio:    (ideaId: number, force = false) =>
+    postJob(`${BASE}/ideas/${ideaId}/audio${force ? '?force=true' : ''}`),
   sync:     (ideaId: number) => postJob(`${BASE}/ideas/${ideaId}/sync`),
   subtitles:(ideaId: number) => postJob(`${BASE}/ideas/${ideaId}/subtitles`),
   assemble: async (ideaId: number, opts: { musicPath: string; bgVolume: number }): Promise<string> => {
