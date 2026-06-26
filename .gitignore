@@ -4,6 +4,10 @@
 # IDE
 **.log
 
+# Node
+node_modules/
+frontend/dist/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 
@@ -16,7 +20,11 @@ models
 **/out
 **/out_long
 **/out_short
-
+.rules/**
 
 # future versions
 **/video_content_generator
+
+# Custom files
+ARCHITECTURE.md
+config.json

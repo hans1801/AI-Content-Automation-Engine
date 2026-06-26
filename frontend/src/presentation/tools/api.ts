@@ -1,0 +1,80 @@
+import { Idea, MusicNode, ScriptFormData } from './types'
+
+const BASE = '/api'
+
+async function post<T>(url: string, body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) throw new Error(`POST ${url} failed: ${res.status}`)
+  return res.json() as Promise<T>
+}
+
+async function postJob(url: string, body?: unknown): Promise<string> {
+  const { job_id } = await post<{ job_id: string }>(url, body)
+  return job_id
+}
+
+export const api = {
+  ideas: {
+    list: (): Promise<Idea[]> => fetch(`${BASE}/ideas`).then(r => r.json()),
+    generate: (): Promise<Idea> => post(`${BASE}/ideas/generate`),
+  },
+
+  script: {
+    generate: (ideaId: number, form: ScriptFormData) =>
+      postJob(`${BASE}/ideas/${ideaId}/script`, form),
+    upload: async (ideaId: number, file: File): Promise<void> => {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`${BASE}/ideas/${ideaId}/script/upload`, { method: 'POST', body: form })
+      if (!res.ok) throw new Error('Script upload failed')
+    },
+  },
+
+  audio:    (ideaId: number, force = false) =>
+    postJob(`${BASE}/ideas/${ideaId}/audio${force ? '?force=true' : ''}`),
+  sync:     (ideaId: number) => postJob(`${BASE}/ideas/${ideaId}/sync`),
+  subtitles:(ideaId: number) => postJob(`${BASE}/ideas/${ideaId}/subtitles`),
+  assemble: async (ideaId: number, opts: { musicPath: string; bgVolume: number }): Promise<string> => {
+    const form = new FormData()
+    form.append('bg_volume', String(opts.bgVolume))
+    form.append('music_path', opts.musicPath)
+    const res = await fetch(`${BASE}/ideas/${ideaId}/assemble`, { method: 'POST', body: form })
+    if (!res.ok) throw new Error(`POST assemble failed: ${res.status}`)
+    const { job_id } = await res.json() as { job_id: string }
+    return job_id
+  },
+
+  music: {
+    list: (): Promise<MusicNode[]> => fetch(`${BASE}/music`).then(r => r.json()),
+    upload: async (files: File[], folder = ''): Promise<void> => {
+      const form = new FormData()
+      files.forEach(f => form.append('files', f))
+      if (folder) form.append('folder', folder)
+      const res = await fetch(`${BASE}/music/upload`, { method: 'POST', body: form })
+      if (!res.ok) throw new Error('Music upload failed')
+    },
+    createFolder: async (name: string, parent = ''): Promise<void> => {
+      const form = new FormData()
+      form.append('name', name)
+      if (parent) form.append('parent', parent)
+      const res = await fetch(`${BASE}/music/folder`, { method: 'POST', body: form })
+      if (!res.ok) throw new Error('Create folder failed')
+    },
+    delete: async (path: string): Promise<void> => {
+      const res = await fetch(`${BASE}/music/${path}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Delete failed')
+    },
+    streamUrl: (path: string) => `${BASE}/music/${path}/stream`,
+  },
+
+  geminiKey: {
+    check: (): Promise<{ configured: boolean; source: string | null }> =>
+      fetch(`${BASE}/config/gemini-key`).then(r => r.json()),
+    save: (key: string): Promise<{ ok: boolean }> =>
+      post(`${BASE}/config/gemini-key`, { key }),
+  },
+}

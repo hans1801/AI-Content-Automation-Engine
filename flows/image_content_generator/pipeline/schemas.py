@@ -1,13 +1,15 @@
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
+
+from tools.common.storage_folder import StoreRecord
 
 
 class State(str, Enum):
     NEW = "NEW"
     SCRIPT_GENERATED = "SCRIPT_GENERATED"
-    IMAGES_GENERATED = "IMAGES_GENERATED"
+    VIDEOS_GENERATED = "VIDEOS_GENERATED"
     AUDIO_GENERATED = "AUDIO_GENERATED"
     VIDEO_GENERATED = "VIDEO_GENERATED"
     VIDEO_SUBTITLED = "VIDEO_SUBTITLED"
@@ -30,8 +32,15 @@ class AudioAlignment(BaseModel):
     alignments: List[SceneAlignment]
 
 
-class IdeaRaw(BaseModel):
-    id: int
+class ScriptFormData(BaseModel):
+    idea: str
+    style: str = "stickman"
+    category: str = "finanzas"
+    tone: str = "motivacional"
+    aspect_ratio: str = "9:16"
+
+
+class IdeaRaw(StoreRecord[State]):
     title: str
-    state: State
     category: str
+    form: Optional[ScriptFormData] = None

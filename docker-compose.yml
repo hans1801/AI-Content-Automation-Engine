@@ -1,7 +1,31 @@
 services:
-  app:
-    build: .
-    container_name: mini-poetry-ffmpeg
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
     volumes:
-      - ./:/app
-    command: poetry run app
+      - .:/app
+      # Volumen persistente para el modelo whisper (fuera del bind mount de /app)
+      - whisper_model:/opt/whisper
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5678:5678"
+    volumes:
+      - ./frontend:/app
+      # Preservar node_modules del contenedor (no sobreescribir con los del host)
+      - /app/node_modules
+    environment:
+      - VITE_BACKEND_HOST=http://backend:8000
+    depends_on:
+      - backend
+
+volumes:
+  whisper_model:

@@ -1,4 +1,5 @@
 import json
+import os
 import shlex
 import subprocess
 from pathlib import Path
@@ -16,7 +17,9 @@ class WhisperTool(BaseModelTool):
     """
     Tool for transcribing audio using whisper-cpp and generating SRT files.
     """
-    DEFAULT_MODEL: ClassVar[str] = "models/whisper/ggml-small.bin"
+    DEFAULT_MODEL: ClassVar[str] = os.getenv(
+        "WHISPER_MODEL_PATH", "models/whisper/ggml-small.bin"
+    )
 
     def _run(self, cmd: str) -> None:
         p = subprocess.run(cmd, shell=True)

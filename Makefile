@@ -1,23 +1,10 @@
-icg-s-step1:
-	poetry run python -m flows.image_content_generator.pipeline.main short step1
+.PHONY: api ui ui-install
 
-icg-s-step2:
-	poetry run python -m flows.image_content_generator.pipeline.main short step2
+api:
+	poetry run uvicorn api.server:app --reload --port 8000
 
-icg-s-step3:
-	poetry run python -m flows.image_content_generator.pipeline.main short step3
+ui:
+	cd frontend && npm run dev
 
-icg-s-step4:
-	poetry run python -m flows.image_content_generator.pipeline.main short step4
-
-icg-s-step5:
-	poetry run python -m flows.image_content_generator.pipeline.main short step5
-
-icg-s-step6:
-	poetry run python -m flows.image_content_generator.pipeline.main short step6
-
-icg-s-step7:
-	poetry run python -m flows.image_content_generator.pipeline.main short step7
-
-icg-s-all:
-	poetry run python -m flows.image_content_generator.pipeline.main short all
+ui-install:
+	cd frontend && npm install

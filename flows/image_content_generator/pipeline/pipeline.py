@@ -1,20 +1,24 @@
 
 from pathlib import Path
-from typing import Any, ClassVar, List, Optional, Type, TypeVar, Union
+from typing import Any, ClassVar, List, Optional, Type, TypeVar
 
 from pydantic import BaseModel, PrivateAttr
 
+from flows.image_content_generator.pipeline.prompt_base import constants as base_constants
+from flows.image_content_generator.pipeline.prompt_base.manager import BasePromptManager
 from flows.image_content_generator.pipeline.prompt_base.models import VideoScript
-from flows.image_content_generator.pipeline.prompt_longs.manager import PromptManagerLongs
-from flows.image_content_generator.pipeline.prompt_shorts.manager import PromptManagerShorts
-from flows.image_content_generator.pipeline.schemas import AudioAlignment, State, VideoOrientation
-from flows.image_content_generator.pipeline.storage_csv import CsvStore
+from flows.image_content_generator.pipeline.schemas import (
+    AudioAlignment,
+    IdeaRaw,
+    ScriptFormData,
+    State,
+    VideoOrientation,
+)
 from tools.audio_generation.audio_tool import AudioTool
 from tools.audio_generation.gemini import GeminiAudioGenerator
 from tools.common.base_model import BaseModelTool
 from tools.common.messenger import Messenger
-from tools.image_generation.gemini import GeminiImageGenerator
-from tools.image_generation.midjourney import ImageTask
+from tools.common.storage_folder import FolderStore
 from tools.text_generation.gemini import GeminiTextGenerator
 from tools.utils.text import slugify
 from tools.utils.time import retry
@@ -22,7 +26,6 @@ from tools.video_editing.ffmpeg import FFmpegTool
 from tools.video_editing.whisper import WhisperTool
 
 T = TypeVar("T", bound=BaseModel)
-PromptManager = Union[PromptManagerShorts, PromptManagerLongs]
 
 
 class Pipeline(BaseModelTool):
@@ -35,23 +38,20 @@ class Pipeline(BaseModelTool):
     orientation: VideoOrientation
 
     _text_gen: Optional[GeminiTextGenerator] = PrivateAttr(default=None)
-    _image_gen: Optional[GeminiImageGenerator] = PrivateAttr(default=None)
     _audio_gen: Optional[GeminiAudioGenerator] = PrivateAttr(default=None)
     _ffmpeg: Optional[FFmpegTool] = PrivateAttr(default=None)
     _whisper: Optional[WhisperTool] = PrivateAttr(default=None)
-    _prompt_manager: Optional[PromptManager] = PrivateAttr(default=None)
+    _prompt_manager: Optional[BasePromptManager] = PrivateAttr(default=None)
     _audio_tool: Optional[AudioTool] = PrivateAttr(default=None)
-    _store: Optional[CsvStore] = PrivateAttr(default=None)
+    _store: Optional[FolderStore[IdeaRaw]] = PrivateAttr(default=None)
 
     # Standard Output Directories
     IDEAS_DIR: ClassVar[str] = "ideas"
-    IMAGES_DIR: ClassVar[str] = "images"
     AUDIOS_DIR: ClassVar[str] = "audios"
     VIDEOS_DIR: ClassVar[str] = "videos"
     EDITIONS_DIR: ClassVar[str] = "editions"
 
     # Standard Output Files
-    IDEA_JSON: ClassVar[str] = "idea.json"
     SCRIPT_JSON: ClassVar[str] = "script.json"
     RAW_VIDEO: ClassVar[str] = "raw_video.mp4"
     SUBTITLED_VIDEO: ClassVar[str] = "subtitled_video.mp4"
@@ -60,26 +60,21 @@ class Pipeline(BaseModelTool):
     FINAL_VIDEO: ClassVar[str] = "final_video.mp4"
 
     # Standard Scene Patterns
-    SCENE_IMAGE_PATTERN: ClassVar[str] = "scene_{}.png"
-    SCENE_AUDIO_PATTERN: ClassVar[str] = "scene_{}.wav"
-    SCENE_VIDEO_PATTERN: ClassVar[str] = "scene_{}.mp4"
-    BATCH_AUDIO_PATTERN: ClassVar[str] = "batch_{}.wav"
+    SCENE_AUDIO_PATTERN: ClassVar[str] = "scene_{:04d}.wav"
+    SCENE_VIDEO_PATTERN: ClassVar[str] = "scene_{:04d}.mp4"
+    SCENE_VIDEO_SYNCED_PATTERN: ClassVar[str] = "scene_{:04d}_synced.mp4"
+    BATCH_AUDIO_PATTERN: ClassVar[str] = "batch_{:04d}.wav"
 
     # Standard Resource Directories
     BG_MUSIC_DIR: ClassVar[str] = "bg-music"
-    REFERENCES_DIR: ClassVar[str] = "reference"
-
-    # Standard Tracking Files
-    IDEAS_TRACKING_CSV: ClassVar[str] = "ideas_tracking.csv"
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
 
     @property
-    def store(self) -> CsvStore:
+    def store(self) -> FolderStore[IdeaRaw]:
         if self._store is None:
-            csv_path = self.out_base / self.IDEAS_TRACKING_CSV
-            self._store = CsvStore(csv_path=csv_path)
+            self._store = FolderStore(ideas_dir=self.get_ideas_dir(), model=IdeaRaw)
         return self._store
 
     @property
@@ -87,16 +82,6 @@ class Pipeline(BaseModelTool):
         if self._text_gen is None:
             self._text_gen = GeminiTextGenerator()
         return self._text_gen
-
-    @property
-    def image_gen(self) -> GeminiImageGenerator:
-        if self._image_gen is None:
-            ar_value = "9:16" if self.orientation == VideoOrientation.SHORT else "16:9"
-            self._image_gen = GeminiImageGenerator(
-                aspect_ratio=ar_value,
-                reference_dir=self.resource_base / self.REFERENCES_DIR,
-            )
-        return self._image_gen
 
     @property
     def audio_gen(self) -> GeminiAudioGenerator:
@@ -126,14 +111,10 @@ class Pipeline(BaseModelTool):
         return self._audio_tool
 
     @property
-    def prompt_manager(self) -> PromptManager:
+    def prompt_manager(self) -> BasePromptManager:
+        """Returns the shared prompt manager (audio + alignment prompts)."""
         if self._prompt_manager is None:
-            if self.orientation == VideoOrientation.SHORT:
-                self._prompt_manager = PromptManagerShorts()
-            elif self.orientation == VideoOrientation.LONG:
-                self._prompt_manager = PromptManagerLongs()
-            else:
-                raise ValueError(f"Orientation {self.orientation} not supported.")
+            self._prompt_manager = BasePromptManager()
         return self._prompt_manager
 
     def load_json(
@@ -202,84 +183,58 @@ class Pipeline(BaseModelTool):
         title_slug = slugify(title)
         return self.get_idea_path(idea_id) / f"{title_slug}.mp4"
 
-    def step1_generate_story(self):
-        """
-        Generate Concept & Script: Creates a cinematic idea and expands it into a storyboard.
-        1. Generates concept and script using PromptManager.
-        2. Registers the new idea in tracking CSV.
-        3. Saves idea.json and script.json.
-        4. Updates state to SCRIPT_GENERATED.
-        """
-        Messenger.info("\n--- Generating cinematic concept and script ---")
-
-        # 1. Generates full story (Concept + Script)
-        idea_data, script, category = self.prompt_manager.generate_full_story(
-            self.text_gen
-        )
-
-        # 2. Registers the new idea in tracking CSV.
-        idea_obj = self.store.add_new_idea(idea_data.title, category)
-
-        # 3. Saves JSONs
-        self.save_json(idea_obj.id, self.IDEA_JSON, idea_data)
-        self.save_json(idea_obj.id, self.SCRIPT_JSON, script)
-
-        # 4. Updates state
-        idea_obj.state = State.SCRIPT_GENERATED
-        self.store.save(idea_obj)
-        Messenger.success(f"Step 1 ready: {State.SCRIPT_GENERATED} finalized.\n")
-
-    def step2_generate_images(self):
-        """
-        Generate Images: Produces photorealistic visuals for each scene.
-        1. Retrieves the SCRIPT_GENERATED idea.
-        2. Loads script.json for scene data.
-        3. Generates Images
-        4. Updates state.
-        """
-        # 1. Retrieves SCRIPT_GENERATED idea.
-        idea_obj = self.store.get_first_by_state(State.SCRIPT_GENERATED)
+    def step1_generate_story(self, idea_id: int, form: ScriptFormData):
+        idea_obj = self.store.get_by_id(idea_id)
         if not idea_obj:
-            Messenger.error("No script ready for images generation.")
+            Messenger.error(f"Idea {idea_id} not found.")
             return
 
-        Messenger.info("\n--- Generating images for the script ---")
+        Messenger.info("\n--- Generating cinematic concept and script ---")
 
-        # 2. Loads script.json for scene data.
-        script_data = self.load_json(idea_obj.id, self.SCRIPT_JSON, VideoScript)
-
-        # 3. Identifies missing scenes and builds tasks
-        all_tasks: List[ImageTask] = []
-        for i, scene in enumerate(script_data.scenes):
-            out_path = self.get_idea_asset_path(
-                idea_obj.id, self.IMAGES_DIR, self.SCENE_IMAGE_PATTERN.format(i + 1)
-            )
-            if out_path.exists():
-                Messenger.info(f"Skipping Scene {i+1} image: File already exists.")
-                continue
-
-            all_tasks.append(
-                ImageTask(prompt=scene.image_prompt.formatted_prompt, output_path=out_path)
-            )
-
-        # 4. Process all tasks (batching handled internally by the generator)
-        self.image_gen.generate_images(tasks=all_tasks)
-
-        # 5. Updates state
-        idea_obj.state = State.IMAGES_GENERATED
+        script, title, category = self._generate_from_form(form)
+        idea_obj.form = form
+        idea_obj.title = title
+        idea_obj.category = category
+        self.save_json(idea_obj.id, self.SCRIPT_JSON, script)
+        idea_obj.state = State.SCRIPT_GENERATED
         self.store.save(idea_obj)
-        Messenger.success(f"Step 2 ready: {State.IMAGES_GENERATED} finalized.\n")
+        Messenger.success(f"Script generated: {State.SCRIPT_GENERATED} finalized.\n")
+
+    def _generate_from_form(self, form: ScriptFormData) -> tuple[VideoScript, str, str]:
+        # Predefined values use curated descriptions; custom values are passed as-is
+        style_desc = base_constants.STYLE_DESCRIPTIONS.get(form.style, form.style)
+        tone_desc = base_constants.TONE_DESCRIPTIONS.get(form.tone, form.tone)
+        category_desc = base_constants.CATEGORY_DESCRIPTIONS.get(form.category, form.category)
+        prompt = base_constants.FORM_SCRIPT_PROMPT.format(
+            idea=form.idea,
+            style_desc=style_desc,
+            tone_desc=tone_desc,
+            category_desc=category_desc,
+            aspect_ratio=form.aspect_ratio,
+        ) + VideoScript.get_json_format_instructions()
+
+        Messenger.info(f"--- Generating script for: {form.idea[:60]}... ---")
+        script = self.text_gen.generate_text(prompt, VideoScript)
+        title = form.idea[:80].strip()
+        return script, title, form.category
 
     @retry(max_attempts=3)
-    def step3_generate_audios(self):
+    def step3_generate_audios(self, idea_id: int, force: bool = False):
         """
         Generate Audio: Batched AI-Guided Batching (Whisper + Gemini).
         Processes scenes in groups of 10 for maximum stability and alignment precision.
         """
-        idea_obj = self.store.get_first_by_state(State.IMAGES_GENERATED)
+        idea_obj = self.store.get_by_id(idea_id)
         if not idea_obj:
-            Messenger.error("No images ready for audio generation.")
+            Messenger.error(f"Idea {idea_id} not found.")
             return
+
+        if force:
+            import shutil
+            audios_dir = self.get_idea_subdir(idea_obj.id, self.AUDIOS_DIR)
+            if audios_dir.exists():
+                shutil.rmtree(audios_dir)
+                Messenger.info("Cleared existing audio files for regeneration.")
 
         Messenger.info("\n--- Generating batched audio for the script ---")
         script_data = self.load_json(idea_obj.id, self.SCRIPT_JSON, VideoScript)
@@ -378,66 +333,65 @@ class Pipeline(BaseModelTool):
         self.store.save(idea_obj)
         Messenger.success(f"Step 3 ready: {State.AUDIO_GENERATED} finalized.\n")
 
-    def step4_generate_videos(self):
+    def step4_generate_videos(self, idea_id: int):
         """
-        Generate Videos: Batch Video Generation (FFmpeg).
-        1. Retrieves the AUDIO_GENERATED idea.
-        2. Loads script.json for scene data.
-        3. Merges assets into scene clips.
-        4. Final video concatenation.
+        Sync & Assemble Videos: Adapts each AI-generated scene video speed to match
+        its corresponding audio duration, then concatenates into raw_video.mp4.
+        1. Retrieves the idea by ID.
+        2. Loads script.json for scene count.
+        3. Syncs each scene video speed to its audio duration.
+        4. Concatenates synced scene videos into raw_video.mp4.
         5. Updates state.
         """
-        # 1. Retrieves AUDIO_GENERATED idea.
-        idea_obj = self.store.get_first_by_state(State.AUDIO_GENERATED)
+        idea_obj = self.store.get_by_id(idea_id)
         if not idea_obj:
-            Messenger.error("No audio ready for video generation.")
+            Messenger.error(f"Idea {idea_id} not found.")
             return
 
-        Messenger.info("\n--- Generating videos for the script ---")
+        Messenger.info("\n--- Syncing AI scene videos to audio duration ---")
 
-        # 2. Loads script.json for scene data.
+        # 2. Loads script.json for scene count.
         script_data = self.load_json(idea_obj.id, self.SCRIPT_JSON, VideoScript)
 
-        # 3. Merges assets into scene clips.
-        scene_videos: List[Path] = []
+        # 3. Syncs each scene video speed to its audio duration.
+        synced_videos: List[Path] = []
         for i in range(len(script_data.scenes)):
-            image_path = self.get_idea_asset_path(
-                idea_obj.id, self.IMAGES_DIR, self.SCENE_IMAGE_PATTERN.format(i + 1)
+            video_path = self.get_idea_asset_path(
+                idea_obj.id, self.VIDEOS_DIR, self.SCENE_VIDEO_PATTERN.format(i + 1)
             )
             audio_path = self.get_idea_asset_path(
                 idea_obj.id, self.AUDIOS_DIR, self.SCENE_AUDIO_PATTERN.format(i + 1)
             )
-            video_path = self.get_idea_asset_path(
-                idea_obj.id, self.VIDEOS_DIR, self.SCENE_VIDEO_PATTERN.format(i + 1)
+            synced_path = self.get_idea_asset_path(
+                idea_obj.id, self.VIDEOS_DIR, self.SCENE_VIDEO_SYNCED_PATTERN.format(i + 1)
             )
 
-            Messenger.info(f"Stitching Scene {i+1} with 3-part dynamic effect...")
-            self.ffmpeg.create_composite_scene_video(image_path, audio_path, video_path)
-            scene_videos.append(video_path)
+            Messenger.info(f"Syncing Scene {i+1} video speed to audio duration...")
+            self.ffmpeg.sync_video_and_audio(video_path, audio_path, synced_path)
+            synced_videos.append(synced_path)
 
-        # 4. Final video concatenation.
+        # 4. Concatenates synced scene videos into raw_video.mp4.
         raw_video = self.get_idea_asset_path(idea_obj.id, self.EDITIONS_DIR, self.RAW_VIDEO)
-        self.ffmpeg.concat_videos(scene_videos, raw_video)
+        self.ffmpeg.concat_videos(synced_videos, raw_video)
 
         # 5. Updates state.
         idea_obj.state = State.VIDEO_GENERATED
         self.store.save(idea_obj)
         Messenger.success(f"Step 4 ready: {State.VIDEO_GENERATED} finalized.\n")
 
-    def step5_generate_subtitles(self):
+    def step5_generate_subtitles(self, idea_id: int):
         """
         Generate Subtitles: Adds subtitles to the video.
-        1. Retrieves the VIDEO_GENERATED idea.
+        1. Retrieves the idea by ID.
         2. Prepares directories.
         3. Extracts audio.
         4. Generates srt.
         5. Adds subtitles to final video.
         6. Updates state.
         """
-        # 1. Retrieves VIDEO_GENERATED idea.
-        idea_obj = self.store.get_first_by_state(State.VIDEO_GENERATED)
+        idea_obj = self.store.get_by_id(idea_id)
         if not idea_obj:
-            Messenger.error("No video ready for subtitle generation.")
+            Messenger.error(f"Idea {idea_id} not found.")
             return
 
         Messenger.info("\n--- Generating subtitles for the video ---")
@@ -473,24 +427,22 @@ class Pipeline(BaseModelTool):
         self.store.save(idea_obj)
         Messenger.success(f"Step 5 ready: {State.VIDEO_SUBTITLED} finalized.\n")
 
-    def step6_add_background_music(self):
+    def step6_add_background_music(
+        self,
+        idea_id: int,
+        music_path: Path,
+        bg_volume: float,
+    ):
         """
-        Background Music: Adds a random background track to the subtitled video.
-        1. Retrieves the VIDEO_SUBTITLED idea.
-        2. Prepares directories.
-        3. Picks a random audio file.
-        4. Mixes it with low volume and looping.
-        5. Updates state.
+        Background Music: Adds a background track to the subtitled video.
         """
-        # 1. Retrieves VIDEO_SUBTITLED idea.
-        idea_obj = self.store.get_first_by_state(State.VIDEO_SUBTITLED)
+        idea_obj = self.store.get_by_id(idea_id)
         if not idea_obj:
-            Messenger.error("No subtitled video found to add music.")
+            Messenger.error(f"Idea {idea_id} not found.")
             return
 
         Messenger.info("\n--- Adding background music ---")
 
-        # 2. Prepares directories.
         subtitled_video = self.get_idea_asset_path(
             idea_obj.id, self.EDITIONS_DIR, self.SUBTITLED_VIDEO
         )
@@ -498,17 +450,15 @@ class Pipeline(BaseModelTool):
             idea_obj.id, self.EDITIONS_DIR, self.FINAL_VIDEO
         )
 
-        # 3. Picks a random audio file
-        selected_music = self.audio_tool.get_random_audio()
-        if not selected_music:
+        if not music_path.exists():
+            Messenger.error(f"Music file not found: {music_path}")
             return
 
-        # 4. Mixes it with low volume and looping.
         self.ffmpeg.add_background_music(
             subtitled_video,
-            selected_music,
+            music_path,
             final_with_music,
-            bg_volume=0.18  # Subtle atmosphere
+            bg_volume=bg_volume,
         )
 
         # 5. Updates state.
@@ -516,18 +466,17 @@ class Pipeline(BaseModelTool):
         self.store.save(idea_obj)
         Messenger.success(f"Step 6 ready: {State.VIDEO_MUSIC_GENERATED} finalized.\n")
 
-    def step7_rename_final_video(self):
+    def step7_rename_final_video(self, idea_id: int):
         """
         Rename Final Video: Renames the final video to match the script title.
-        1. Retrieves the VIDEO_MUSIC_GENERATED idea.
+        1. Retrieves the idea by ID.
         2. Prepares directories.
         3. Renames the final video.
         4. Updates state.
         """
-        # 1. Retrieves VIDEO_MUSIC_GENERATED idea.
-        idea_obj = self.store.get_first_by_state(State.VIDEO_MUSIC_GENERATED)
+        idea_obj = self.store.get_by_id(idea_id)
         if not idea_obj:
-            Messenger.error("No video with music found to rename.")
+            Messenger.error(f"Idea {idea_id} not found.")
             return
 
         Messenger.info("\n--- Final Renaming: Naming video after script title ---")
