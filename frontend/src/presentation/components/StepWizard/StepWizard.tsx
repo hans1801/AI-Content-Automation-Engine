@@ -9,7 +9,7 @@ import ProductionStep from './steps/ProductionStep'
 import {
   Wizard, WizardHeader, WizardTitle, WizardCategory,
   StepDetail, StepDetailHeader, StepDetailNum, StepDetailTitle, StepDetailStatus,
-  BtnPrimary, BtnSecondary,
+  BtnPrimary, BtnSecondary, DoneText,
 } from './StepWizard.styled'
 
 const STEPS: PipelineStep[] = [
@@ -69,7 +69,7 @@ export default function StepWizard({ idea, onUpdate }: Props) {
         <ProductionStep
           base={base} level={w.level}
           subsStep={w.subsStep} assembleStep={w.assemble}
-          onSubs={w.handleSubs} onAssemble={w.handleAssemble}
+          onSubs={w.handleSubs}
         />
       )
       default: return null
@@ -101,7 +101,12 @@ export default function StepWizard({ idea, onUpdate }: Props) {
           {/* Acciones contextuales del paso actual */}
           {w.selected === 0 && w.level >= 1 && !w.showForm && !w.scriptStep.jobId && (
             <>
-              <BtnSecondary style={{ marginLeft: 'auto' }} onClick={() => window.open(`${base}/script`, '_blank')}>
+              <BtnSecondary style={{ marginLeft: 'auto' }} onClick={() => {
+                const a = document.createElement('a')
+                a.href = `${base}/script`
+                a.download = `script_${idea.id}.json`
+                a.click()
+              }}>
                 ↓ Descargar script
               </BtnSecondary>
               <BtnSecondary onClick={() => w.setShowForm(true)}>↺ Regenerar</BtnSecondary>
@@ -117,16 +122,20 @@ export default function StepWizard({ idea, onUpdate }: Props) {
             </BtnPrimary>
           )}
 
-          {w.selected === STEPS.length - 1 && w.level >= 5 && !w.subsStep.jobId && !w.assemble.jobId && (
-            <BtnPrimary
-              style={{ marginLeft: 'auto' }}
-              onClick={() => window.open(
-                w.level >= 7 ? `${base}/video` : `${base}/editions/subtitled_video.mp4`,
-                '_blank'
-              )}
-            >
-              ⬇ Descargar video
-            </BtnPrimary>
+          {w.selected === STEPS.length - 1 && w.level >= 7 && !w.subsStep.jobId && !w.assemble.jobId && (
+            <>
+              <DoneText style={{ marginLeft: 'auto' }} $completed>🎬 Video completado</DoneText>
+              <BtnPrimary
+                onClick={() => {
+                  const a = document.createElement('a')
+                  a.href = `${base}/video`
+                  a.download = `video_${idea.id}.mp4`
+                  a.click()
+                }}
+              >
+                ⬇ Descargar video
+              </BtnPrimary>
+            </>
           )}
         </StepDetailHeader>
 

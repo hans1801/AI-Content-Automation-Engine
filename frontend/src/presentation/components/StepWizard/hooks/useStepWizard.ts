@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Idea, IdeaState, PipelineLevel, ScriptFormData } from '../../../tools/types'
 import { api } from '../../../tools/api'
 import { useJobStep } from '../../../tools/hooks/useJobStep'
@@ -10,6 +10,8 @@ const LEVEL: Record<IdeaState, PipelineLevel> = {
 }
 
 export type StepStatus = 'done' | 'active' | 'running' | 'locked'
+
+export interface MusicOpts { musicPath: string; bgVolume: number }
 
 export interface StepWizardState {
   level: PipelineLevel
@@ -31,8 +33,8 @@ export interface StepWizardState {
   handleScriptUpload: (file: File) => Promise<void>
   handleAudio:        () => Promise<void>
   handleSync:         () => Promise<void>
-  handleSubs:         () => Promise<void>
-  handleAssemble:     (opts: { musicPath: string; bgVolume: number }) => Promise<void>
+  handleSubs:         (opts: MusicOpts) => Promise<void>
+  handleAssemble:     (opts: MusicOpts) => Promise<void>
   getStatus:  (i: number) => StepStatus
   stepDone:   (i: number) => boolean
 }
@@ -44,6 +46,8 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
   const subsStep   = useJobStep()
   const assemble   = useJobStep()
 
+  const pendingMusic = useRef<MusicOpts | null>(null)
+
   const [selected, setSelected]            = useState(0)
   const [showForm, setShowForm]            = useState(false)
   const [scriptMode, setScriptMode]        = useState<'generate' | 'upload'>('generate')
@@ -52,19 +56,18 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
 
   const level: PipelineLevel = LEVEL[idea.state]
 
-  // Reset all state when idea changes
   useEffect(() => {
     setSelected(Math.min(level, 4))
     setShowForm(false)
     setScriptMode('generate')
     setReupVideos(false)
+    pendingMusic.current = null
     ;[scriptStep, audioStep, syncStep, subsStep, assemble].forEach(s => s.reset())
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idea.id])
 
-  // Refresh idea state when a job completes (no auto-advance)
   useEffect(() => {
-    const steps = [scriptStep, audioStep, syncStep, subsStep, assemble]
+    const steps = [scriptStep, audioStep, syncStep, assemble]
     for (const step of steps) {
       if (step.done && !step.handled.current) {
         step.handled.current = true
@@ -72,7 +75,18 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
         onUpdate()
       }
     }
-  }, [scriptStep.done, audioStep.done, syncStep.done, subsStep.done, assemble.done, onUpdate])
+
+    if (subsStep.done && !subsStep.handled.current) {
+      subsStep.handled.current = true
+      subsStep.clear()
+      onUpdate()
+      if (pendingMusic.current) {
+        const opts = pendingMusic.current
+        pendingMusic.current = null
+        api.assemble(idea.id, opts).then(jobId => assemble.start(jobId))
+      }
+    }
+  }, [scriptStep.done, audioStep.done, syncStep.done, subsStep.done, assemble.done, onUpdate, idea.id])
 
   const handleScript = useCallback(async (form: ScriptFormData) => {
     setShowForm(false)
@@ -91,10 +105,20 @@ export function useStepWizard(idea: Idea, onUpdate: () => void): StepWizardState
     }
   }, [idea.id, onUpdate])
 
-  const handleAudio    = useCallback(async () => { audioStep.start(await api.audio(idea.id, level >= 3)) },    [idea.id, audioStep, level])
-  const handleSync     = useCallback(async () => { syncStep.start(await api.sync(idea.id)) },      [idea.id, syncStep])
-  const handleSubs     = useCallback(async () => { subsStep.start(await api.subtitles(idea.id)) }, [idea.id, subsStep])
-  const handleAssemble = useCallback(async (opts: { musicPath: string; bgVolume: number }) => {
+  const handleAudio = useCallback(async () => {
+    audioStep.start(await api.audio(idea.id, level >= 3))
+  }, [idea.id, audioStep, level])
+
+  const handleSync = useCallback(async () => {
+    syncStep.start(await api.sync(idea.id))
+  }, [idea.id, syncStep])
+
+  const handleSubs = useCallback(async (opts: MusicOpts) => {
+    pendingMusic.current = opts
+    subsStep.start(await api.subtitles(idea.id))
+  }, [idea.id, subsStep])
+
+  const handleAssemble = useCallback(async (opts: MusicOpts) => {
     assemble.start(await api.assemble(idea.id, opts))
   }, [idea.id, assemble])
 

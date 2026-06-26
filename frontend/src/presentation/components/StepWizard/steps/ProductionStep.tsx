@@ -1,31 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { PipelineLevel } from '../../../tools/types'
 import Terminal from '../components/Terminal/Terminal'
 import VideoPlayer from '../components/previews/VideoPlayer'
 import MusicLibrary from '../../MusicLibrary/MusicLibrary'
-import { ActionRow, BtnPrimary, BtnSecondary, DoneText } from '../StepWizard.styled'
+import { ActionRow, BtnPrimary, BtnSecondary } from '../StepWizard.styled'
 import { JobStep } from '../../../tools/hooks/useJobStep'
 import { TwoCol, Left, VolumeRow, VolumeLabel, VolumeSlider, VolumePct, MusicHint } from './ProductionStep.styled'
+import type { MusicOpts } from '../hooks/useStepWizard'
 
 interface Props {
   base: string
   level: PipelineLevel
   subsStep: JobStep
   assembleStep: JobStep
-  onSubs: () => void
-  onAssemble: (opts: { musicPath: string; bgVolume: number }) => void
+  onSubs: (opts: MusicOpts) => void
 }
 
-export default function ProductionStep({ base, level, subsStep, assembleStep, onSubs, onAssemble }: Props) {
+export default function ProductionStep({ base, level, subsStep, assembleStep, onSubs }: Props) {
   const [selectedPath, setSelectedPath] = useState('')
   const [volume, setVolume] = useState(18)
 
   const anyRunning = !!(subsStep.jobId || assembleStep.jobId)
 
-  function handleAssemble() {
-    if (!selectedPath) return
-    onAssemble({ musicPath: selectedPath, bgVolume: volume / 100 })
-  }
+  const [videoVersion, setVideoVersion] = useState(0)
+  const wasRunning = useRef(false)
+  useEffect(() => {
+    if (wasRunning.current && !anyRunning) setVideoVersion(v => v + 1)
+    wasRunning.current = anyRunning
+  })
 
   const videoSrc = level >= 7
     ? `${base}/video`
@@ -64,7 +66,10 @@ export default function ProductionStep({ base, level, subsStep, assembleStep, on
 
         {level === 4 && (
           <ActionRow>
-            <BtnPrimary onClick={onSubs} disabled={!selectedPath}>
+            <BtnPrimary
+              onClick={() => onSubs({ musicPath: selectedPath, bgVolume: volume / 100 })}
+              disabled={!selectedPath}
+            >
               Poner música y generar subtítulos
             </BtnPrimary>
             {!selectedPath && (
@@ -73,31 +78,23 @@ export default function ProductionStep({ base, level, subsStep, assembleStep, on
           </ActionRow>
         )}
 
-        {level >= 5 && level < 7 && (
-          <>
-            <ActionRow>
-              <BtnPrimary onClick={handleAssemble} disabled={!selectedPath}>
-                Agregar Música y Finalizar
-              </BtnPrimary>
-              <BtnSecondary onClick={onSubs}>↺ Regenerar Subtítulos</BtnSecondary>
-            </ActionRow>
-            {!selectedPath && (
-              <MusicHint>Selecciona un archivo de música para continuar.</MusicHint>
-            )}
-          </>
-        )}
 
         {level === 7 && (
           <ActionRow>
-            <DoneText $completed>🎬 Video completado</DoneText>
-            <BtnSecondary onClick={handleAssemble} disabled={!selectedPath}>
-              ↺ Re-finalizar
+            <BtnSecondary
+              onClick={() => onSubs({ musicPath: selectedPath, bgVolume: volume / 100 })}
+              disabled={!selectedPath}
+            >
+              ↺ Regenerar
             </BtnSecondary>
+            {!selectedPath && (
+              <MusicHint>Selecciona un archivo de música para regenerar.</MusicHint>
+            )}
           </ActionRow>
         )}
       </Left>
 
-      <VideoPlayer src={videoSrc} label={videoLabel} />
+      <VideoPlayer src={`${videoSrc}?v=${videoVersion}`} label={videoLabel} />
     </TwoCol>
   )
 }
